@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Download from Github 
+
+git clone https://github.com/twbs/bootstrap.git --branch "v5.3.2" --depth 1
+
+mkdir -p ./res
+
+cp ./bootstrap/dist/js/bootstrap.bundle.min.js ./res
+cp ./bootstrap/dist/css/bootstrap.min.css ./res
+
+rm -rf ./bootstrap

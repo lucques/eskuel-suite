@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL-Browser</title>
+    
+    <script src="ext/bootstrap/res/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="ext/bootstrap/res/bootstrap.min.css">
+
+
+    <script src="ext/sql-js/res/sql-wasm.js"></script>
+    <script>const sqlJs = initSqlJs({ locateFile: filename => `ext/sql-js/res/${filename}` });</script>
+</head>
+<body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {       
+    
+            const b = new eskuelSuite.MultiBrowserComponent('browser');
+
+            b.addAndOpenUrl('res/dbs/onlineshop.sql');
+            b.addAndOpenUrl('res/dbs/fahrschule.sql');
+
+            b.addUrl('res/dbs/fahrschule-minimal.sql');
+            b.addUrl('res/dbs/onlineshop.sql');
+            b.addUrl('res/dbs/onlineshop-minimal.sql');
+            b.addUrl('res/dbs/eisdiele.sql');
+            b.addUrl('res/dbs/obst-gemuese.sql');
+            b.addUrl('res/dbs/cafe.sql');
+            b.addUrl('res/dbs/pizzeria-mit-redundanz.sql');
+    
+            b.init();
+        });
+    </script>
+    
+    <div class="p-4">
+        <div id="browser"></div>
+    </div>
+</body>
+</html>
