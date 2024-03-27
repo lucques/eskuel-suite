@@ -34,7 +34,7 @@ import { BrowserInstance, Status } from './browser-instance';
 import { RunInitScriptFail, FetchInitScriptFail, SqlResult, ParseSchemaFail, sqlResultHash } from "./sql-js-api";
 
 import { FileSource, NamedFileSource, assert } from "./util";
-import { TableInfoView, Widget, ResultTableView, ClickableIcon, OpenModal, ClickableIconButton } from './react';
+import { TableInfoView, Widget, ResultTableView, ClickableIcon, OpenModal, IconActionButton, IconLinkButton } from './react';
 
 
 //////////////////////
@@ -216,11 +216,11 @@ function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onEdi
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Browser</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <ClickableIconButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} />
-                        <ClickableIconButton type='edit' onClick={() => { if(viewedInstanceIndex !== null) { onEditStart(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
+                        <IconActionButton type='edit' onClick={() => { if(viewedInstanceIndex !== null) { onEditStart(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
                     </li>
                     <li className="header-home list-group-item">
-                        <Button className={classNames(['bg-white', 'btn-outline-dark'])}><a href="../">🏠</a></Button>
+                        <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
                 <OpenModal title="Datenbank laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />

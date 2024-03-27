@@ -33,7 +33,7 @@ import { Schema } from './schema';
 import { NamedFileSource, assert, reorder } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
 import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML } from './game-pure';
-import { ClickableIcon, ClickableIconButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
+import { ClickableIcon, IconActionButton, IconLinkButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
 import { EditorInstance } from './game-editor-instance';
 import { BrowserInstance } from './browser-instance';
 import { EditDbModal } from './browser-react';
@@ -250,11 +250,11 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Spielekonsole</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <ClickableIconButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} />
-                        <ClickableIconButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
+                        <IconActionButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
                     </li>
                     <li className="header-home list-group-item">
-                        <Button className={classNames(['bg-white', 'btn-outline-dark'])}><a href="../">🏠</a></Button>
+                        <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
                 <OpenModal title="Spiel laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />

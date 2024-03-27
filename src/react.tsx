@@ -4,6 +4,7 @@ import { Button, Card, Form, ListGroup, Modal, Table } from "react-bootstrap";
 import { ColInfo, TableInfo } from "./schema";
 import { SqlValue } from "sql.js";
 import { FileSource, NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
+import { Alarm, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
 
 
 ////////////
@@ -98,52 +99,58 @@ export function ResultTableView({result, className}: {result: initSqlJs.QueryExe
 // Clickable icons //
 /////////////////////
 
-// TODO provide default value for `disabled` 
-export function ClickableIcon({type, disabled, onClick}: {type: 'edit' | 'close' | 'open' | 'save' | 'add', disabled: boolean, onClick: () => void}) {
+type IconType = 'edit' | 'close' | 'open' | 'save' | 'add' | 'home';
+
+export function Icon({type}: {type: IconType}) {
+    if (type == 'edit') {
+        return <Pencil />;
+    }
+    else if (type == 'close') {
+        return <X />;
+    }
+    else if (type == 'open') {
+        return <Folder2Open />;
+    }
+    else if (type == 'save') {
+        return <Save />;
+    }
+    else if (type == 'add') {
+        return <PlusCircle />;
+    }
+    else {
+        return <HouseDoor />;
+    }
+}
+
+export function ClickableIcon({type, onClick, disabled = false}: {type: IconType, onClick: () => void, disabled?: boolean}) {
     return (
         <span className={classNames(['clickable-icon', disabled ? 'disabled': ''])} onClick={(e) => {
                 e.stopPropagation();
                 onClick();
             }}>
-            {
-                type == 'edit'
-                    ? '✏️'
-                : type == 'close'
-                    ? '✕'
-                : type == 'open'
-                    ? '📂'
-                : type == 'save'
-                    ? '💾'
-                : '➕'
-            } 
+            <Icon type={type} />
         </span>
+    )
+}
+
+export function IconLinkButton({type, href, disabled = false}: {type: IconType, href: string, disabled?: boolean}) {
+    return (
+        <a href={href} className={classNames(['clickable-icon-button', 'btn', disabled ? 'disabled': '', 'btn-outline-dark'])}>
+            <Icon type={type} />
+        </a>
     );
 }
 
-// TODO provide default value for `disabled` 
-export function ClickableIconButton({type, disabled, onClick}: {type: 'edit' | 'close' | 'open' | 'save' | 'add' | 'home', disabled: boolean, onClick: () => void}) {
+export function IconActionButton({type, onClick, disabled = false}: {type: IconType, onClick: () => void, disabled?: boolean}) {
     return (
-        <Button className={classNames(['clickable-icon-button', disabled ? 'disabled': '', 'bg-white', 'btn-outline-dark'])} onClick={(e) => {
+        <Button className={classNames(['clickable-icon-button', 'btn', disabled ? 'disabled': '', 'btn-outline-dark'])} onClick={(e) => {
                 e.stopPropagation();
                 onClick();
             }}>
-            {
-                type == 'edit'
-                    ? '✏️'
-                : type == 'close'
-                    ? '✕'
-                : type == 'open'
-                    ? '📂'
-                : type == 'save'
-                    ? '💾'
-                : type == 'add'
-                    ? '➕'
-                : '🏠'
-            } 
+            <Icon type={type} />
         </Button>
-    );
+    )
 }
-
 
 
 ////////////

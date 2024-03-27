@@ -35,7 +35,7 @@ import { Schema } from './schema';
 import { FileSource, NamedFileSource, assert } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
 import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene } from './game-pure';
-import { ClickableIcon, ClickableIconButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
+import { ClickableIcon, IconActionButton, IconLinkButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
 export { Game } from './game-pure';
@@ -78,10 +78,10 @@ function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: NamedF
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Spielekonsole</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <ClickableIconButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} />
                     </li>
                     <li className="header-home list-group-item">
-                        <Button className={classNames(['bg-white', 'btn-outline-dark'])}><a href="../">🏠</a></Button>
+                        <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
                 <OpenModal title="Spiel laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelectGame} />

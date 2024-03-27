@@ -290,25 +290,35 @@
 /**********/
 
 .eskuel.app-browser .header-name  {
-    background-color: #9BB8CD;
+    background-color: rgb(155, 184, 205);
 }
 .eskuel.app-browser .header-toolbox, .eskuel.app-browser .header-home {
-    background-color: #9BB8CD;
-    opacity: 70%;
+    background-color: rgba(155, 184, 205, 0.7);
+}
+.eskuel.app-browser .clickable-icon-button {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: black;
 }
 
+
 .eskuel.app-game-console .header-name  {
-    background-color: #EEC759;
+    background-color: rgb(238, 199, 89);
 }
 .eskuel.app-game-console .header-toolbox, .eskuel.app-game-console .header-home {
-    background-color: #EEC759;
-    opacity: 70%;
+    background-color: rgb(238, 199, 89, 0.7);
+}
+.eskuel.app-game-console .clickable-icon-button {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: black;
 }
 
 .eskuel.app-game-editor .header-name  {
-    background-color: #B1C381;
+    background-color: rgb(177, 195, 129);
 }
 .eskuel.app-game-editor .header-toolbox, .eskuel.app-game-editor .header-home {
-    background-color: #B1C381;
-    opacity: 70%;
+    background-color: rgb(177, 195, 129, 0.7);
+}
+.eskuel.app-game-editor .clickable-icon-button {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: black;
 }
