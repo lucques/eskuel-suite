@@ -2,7 +2,7 @@
 /* Main layout */
 /***************/
 
-.eskuel {
+.app-browser, .app-game-console, .app-game-editor {
     width:1249px;
     
     margin-left: auto;
@@ -12,6 +12,11 @@
 .eskuel .header-meta {
     margin-top: 20px;
     margin-bottom: 20px;
+}
+
+.eskuel .header-meta > li {
+    display: inline-flex;
+    column-gap: 7px;
 }
 
 .eskuel .header-name {
@@ -51,38 +56,83 @@
 /***********/
 
 
+/**************************/
+/* Browser + Game Console */
+/**************************/
+
+.eskuel .widget-query .widget-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    row-gap: 10px;
+}
+
+.eskuel .query-editor {
+    position: relative;
+}
+
+.eskuel .query-editor-resize-handlet {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px; 
+    cursor: ns-resize; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+}
+
+.eskuel .query-editor-resize-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    cursor: ns-resize;
+}
+
+.eskuel .query-editor-resize-handle::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    border-right: 2px solid rgba(0, 0, 0);
+    border-bottom: 2px solid rgba(0, 0, 0);
+}
 
 
 /**********/
 /* Editor */
 /**********/
 
-.eskuel .editor-meta-data-view {
+.eskuel .editor {
     display: grid;
     column-gap: 10px;
-    grid-template-columns: 1fr 1fr;
+    row-gap: 10px;
+    grid-template-columns: 3fr 2fr;
     margin-bottom:10px;
+}
+
+.eskuel .editor > div {
+    min-width: 0; /* This helps in dealing with content overflow */
+    max-width: 100%; /* Ensures content does not overflow the grid area */
+    overflow: auto; /* Adds scrolling to any div that overflows */
+}
+
+.eskuel .editor-meta-data-right .input-group {
+    height: 100%;
 }
 
 .eskuel .editor-meta-data-title input {
     font-size: 200%;
 }
 
-.eskuel .editor-meta-data-more {
-    display: flex;
-    flex-direction: column;
-    row-gap: 10px;
-}
-
-.eskuel .editor-meta-data-more span {
-    width: 20%;
-}
-
-.eskuel .editor-body {
-    display:grid;
-    column-gap: 10px;
-    grid-template-columns: 7fr 3fr;
-    align-items: start;
+.eskuel .editor-meta-data-title > span, .eskuel .editor-meta-data-copyright > span {
+    width:120px;
 }
 
 .eskuel .editable-scenes-container > div {
@@ -104,13 +154,28 @@
 .eskuel .editor-sidebar {
     display:flex;
     flex-direction: column;
+    align-content: flex-start;
     row-gap: 10px;
+}
+
+.eskuel .widget-initscript-load {
+    margin-top:10px;
+    margin-bottom:10px;
+}
+
+.eskuel .game-database-status-short-view {
+    flex: 1 0 auto;
+
+    margin-bottom: 0;
+    padding-top:6px;
+    padding-bottom:6px;
 }
 
 .eskuel .add-scene-button {
     margin-top: 20px;
     text-align: center;    
 }
+
 
 /****************/
 /* Game console */
@@ -123,7 +188,6 @@
 .eskuel .game-meta-data-view {
     display: grid;
     column-gap: 10px;
-    /* grid-template-columns: 1fr 1fr; */
     grid-template-columns: 5fr 7fr;
     margin-bottom:10px;
 }
@@ -145,22 +209,17 @@
 }
 
 /* Scene widget */
-.eskuel .widget-scene .widget-scene-body {
+.eskuel .widget-scene .widget-body {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+
     font-size: 140%;
 }
 
 .eskuel .widget-scene button {
     margin-bottom: 5px;
     font-size: 120%;
-}
-
-/* Query widget */
-.eskuel .widget-query .widget-query-editor {
-    height: calc(100% - 40px);
-}
-
-.eskuel .widget-query .widget-query-extra-buttons {
-    column-gap: 10px;
 }
 
 /* Results widget */
@@ -187,24 +246,55 @@
 }
 
 
-
-
 /**********/
 /* Modals */
 /**********/
 
-.eskuel .edit-db-modal form > div {
-    margin-bottom: 20px;
+.eskuel .modal-body form {
+    display: flex;
+    flex-direction: column;
+    row-gap: 20px;
+}
+
+.eskuel .modal-body .open-file-radio {
+    display: inline-flex;
+    align-items: center;
+
+    /* padding-right:0; */
+    border-top-width: 2px;
+}
+
+.eskuel .modal-body .open-file-radio-control {
+    margin-top:10px;
+}
+
+.eskuel .modal-body .open-file-radio-icon {
+    padding: 20px 10px 20px 30px;
 }
 
 
+/*****************/
+/* Editor Modals */
+/*****************/
+
+.eskuel .edit-scene-options {
+    display: grid;
+    grid-template-columns: min-content 1fr;
+    column-gap: 5px;
+    row-gap: 10px;
+}
+
+.eskuel .edit-scene-options div {
+    min-width: 0;
+}
+
 
 /*****************/
 /* Schema widget */
 /*****************/
 
 /* Schema widget */
-.eskuel .widget-schema-body {
+.eskuel .widget-schema .widget-body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -234,6 +324,37 @@
     font-style: italic;    
 }
 
+
+/**********/
+/* Schema */
+/**********/
+
+.eskuel .schema {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.eskuel .schema .table-name {
+    text-align: right;
+    font-weight: bold;
+
+    padding-right: 0;
+}
+
+.eskuel .schema .table-cols {
+    padding-left: 3px;
+}
+
+.eskuel .schema .primary-key {
+    text-decoration: underline;    
+}
+
+.eskuel .schema .foreign-key {
+    font-style: italic;    
+}
+
+
 /***********/
 /* General */
 /***********/
@@ -257,7 +378,7 @@
 .eskuel .clickable-icon-button {
     /* margin: -5px; */
     /* padding: 5px; */
-    margin-left:7px;
+    /* margin-left:7px; */
 
     cursor: pointer;
 }
@@ -266,12 +387,18 @@
     visibility: hidden;
 }
 
-
-
 .eskuel .widget-io > .card-body {
     display: grid;
     column-gap: 30px;
     grid-template-columns: 30% 30%;
+}
+
+.eskuel .col-gap-default {
+    column-gap: 10px;
+}
+
+.eskuel .row-gap-default {
+    row-gap: 10px;
 }
 
 
@@ -289,36 +416,36 @@
 /* Colors */
 /**********/
 
-.eskuel.app-browser .header-name  {
+.eskuel .app-browser .header-name  {
     background-color: rgb(155, 184, 205);
 }
-.eskuel.app-browser .header-toolbox, .eskuel.app-browser .header-home {
+.eskuel .app-browser .header-toolbox, .eskuel .app-browser .header-home {
     background-color: rgba(155, 184, 205, 0.7);
 }
-.eskuel.app-browser .clickable-icon-button {
+.eskuel .app-browser .clickable-icon-button {
     background-color: rgba(255, 255, 255, 0.7);
     color: black;
 }
 
 
-.eskuel.app-game-console .header-name  {
+.eskuel .app-game-console .header-name  {
     background-color: rgb(238, 199, 89);
 }
-.eskuel.app-game-console .header-toolbox, .eskuel.app-game-console .header-home {
+.eskuel .app-game-console .header-toolbox, .eskuel .app-game-console .header-home {
     background-color: rgb(238, 199, 89, 0.7);
 }
-.eskuel.app-game-console .clickable-icon-button {
+.eskuel .app-game-console .clickable-icon-button {
     background-color: rgba(255, 255, 255, 0.7);
     color: black;
 }
 
-.eskuel.app-game-editor .header-name  {
+.eskuel .app-game-editor .header-name  {
     background-color: rgb(177, 195, 129);
 }
-.eskuel.app-game-editor .header-toolbox, .eskuel.app-game-editor .header-home {
+.eskuel .app-game-editor .header-toolbox, .eskuel .app-game-editor .header-home {
     background-color: rgb(177, 195, 129, 0.7);
 }
-.eskuel.app-game-editor .clickable-icon-button {
+.eskuel .app-game-editor .clickable-icon-button {
     background-color: rgba(255, 255, 255, 0.7);
     color: black;
 }

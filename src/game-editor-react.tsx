@@ -3,7 +3,7 @@ import React, { ReactComponentElement, ReactElement, ReactNode, createContext, u
 import { createRoot } from 'react-dom/client';
 
 // React-Bootstrap
-import { Alert, Button, Card, CloseButton, Form, InputGroup, ListGroup, Modal, OverlayTrigger, Table, Tooltip, TooltipProps} from 'react-bootstrap';
+import { Alert, Badge, Button, Card, CloseButton, Form, InputGroup, ListGroup, Modal, OverlayTrigger, Table, Tooltip, TooltipProps} from 'react-bootstrap';
 
 // classnames
 import classNames from 'classnames';
@@ -23,20 +23,26 @@ import 'react-tabs/style/react-tabs.css';
 
 // react-syntax-highlighter
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { prism as prismStyle } from 'react-syntax-highlighter/dist/esm/styles/prism';
+const customStyle = {
+    // Add other styles if needed
+    overflow: 'auto', // This makes the content scrollable
+    maxWidth: '100%'
+};
+
 
 // Custom CSS
 import './screen.css';
 
 
-import { ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
+import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
-import { NamedFileSource, assert, reorder } from "./util";
+import { FileSource, NamedFileSource, assert, reorder } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML } from './game-pure';
-import { ClickableIcon, IconActionButton, IconLinkButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, GameDatabaseStatus } from './game-pure';
+import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, OpenFileModal, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
 import { EditorInstance } from './game-editor-instance';
 import { BrowserInstance } from './browser-instance';
-import { EditDbModal } from './browser-react';
 
 export { Game } from './game-pure';
 
@@ -248,7 +254,7 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
         <>
             <div className="header">
                 <ul className="header-meta list-group list-group-horizontal">
-                    <li className="header-name list-group-item"><strong>SQL-Spielekonsole</strong></li>
+                    <li className="header-name list-group-item"><strong>SQL-Spieleeditor</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
                         <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
                         <IconActionButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
@@ -257,11 +263,12 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                         <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
-                <OpenModal title="Spiel laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
             </div>             
+            <OpenFileModal title="Spiel laden"  fileUploadTitle='Spieldatei hochladen' fileIconType='file-xml' fileAccept='.xml' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
         </>
     );
 }
+
 
 export function EditorInstanceView({instance, status}: {instance: EditorInstance, status: Status}) {
 
@@ -272,10 +279,8 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
     const [title, setTitle] = useState<string>('');
     const [teaser, setTeaser] = useState<string>('');
     const [copyright, setCopyright] = useState<string>('');
-    const [initialSqlScript, setInitialSqlScript] = useState<string>('');
-    const [initialSqlScriptCounter, setInitialSqlScriptCounter] = useState<number>(0); // TODO: Hack to force re-render
-    const changeInitialSqlScriptCounter = () => { setInitialSqlScriptCounter((c) => c + 1); }
     const [scenes, setScenes] = useState<EditableScene[]>([]);
+    const [gameDatabaseStatus, setGameDatabaseStatus] = useState<GameDatabaseStatus>({ kind: 'pending' });
 
     const updateMetaData = () => {
         instance.getGame().then(gameRes => {
@@ -289,15 +294,18 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         });
     }
 
-    const updateInitialSqlScript = () => {
-        instance.getGame().then(gameRes => {
-            if (gameRes.ok) {
-                const game = gameRes.data;
+    const updateSchemaStatus = () => {
+        instance.getSchema().then((schemaResult) => {
+            // Success
+            if (schemaResult.ok) {
+                setGameDatabaseStatus({ kind: 'loaded', data: schemaResult.data });
+            }
+            // Fail
+            else {
+                // Assertion holds because inst status must be "active"
+                assert(schemaResult.error.kind === 'run-init-script' || schemaResult.error.kind === 'parse-schema');
 
-                setInitialSqlScript(game.initialSqlScript);
-
-                // Hack to force re-render
-                changeInitialSqlScriptCounter();
+                setGameDatabaseStatus({ kind: 'failed', error: schemaResult.error });
             }
         });
     }
@@ -321,7 +329,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         instance.resolve().then((s) => {               
             if (s.ok) {
                 updateMetaData();
-                updateInitialSqlScript();
+                updateSchemaStatus();
                 initScenes();
             }
         });
@@ -342,11 +350,9 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         });
     }
 
-    const onCommitInitialSqlScript = () => {
-        assert(status.kind === 'active');
-
-        instance.onCommitInitialSqlScript(initialSqlScript).then(() => {
-            updateInitialSqlScript();
+    const onSetInitialSqlSource = (initSqlSource: FileSource) => {
+        instance.onCommitInitialSqlScript(initSqlSource).then(() => {
+            updateSchemaStatus();
         });
     }
 
@@ -510,21 +516,6 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
     };
 
 
-
-    //////////////////////
-    // Helper functions //
-    //////////////////////
-
-    // const extractGame = () => {
-    //     const newScenes = scenes.map((scene) => {
-    //         const { key, ...sceneData } = scene;
-    //         return sceneData;
-    //     });
-        
-    //     return new Game(title, teaser, copyright, initialSqlScript, newScenes);
-    // }
-
-
     ////////////
     // Render //
     ////////////
@@ -534,16 +525,11 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
             <StatusView status={status} />
             {
                 status.kind === 'active' ? (
-                    <div>
-                        <div className="editor-header">
-                            <MetaDataView title={title} setTitle={setTitle} teaser={teaser} setTeaser={setTeaser} copyright={copyright} setCopyright={setCopyright} onCommitMetaData={onCommitMetaData} />
-                        </div>
-                        <div className="editor-body">
-                            <EditableScenesWidget scenes={scenes} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onAddSceneStart={onAddSceneStart} onDeleteScene={onDeleteScene} onReorderScenes={onReorderScenes} />
-                            <div className="editor-sidebar">
-                                <InitScriptWidget instance={instance} initialSqlScript={initialSqlScript} setInitialSqlScript={setInitialSqlScript} onCommitInitialSqlScript={onCommitInitialSqlScript} />
-                                <SchemaWidget instance={instance} initialSqlScriptCounter={initialSqlScriptCounter} />
-                            </div>
+                    <div className="editor">
+                        <MetaDataView title={title} setTitle={setTitle} teaser={teaser} setTeaser={setTeaser} copyright={copyright} setCopyright={setCopyright} onCommitMetaData={onCommitMetaData} />
+                        <EditableScenesWidget scenes={scenes} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onAddSceneStart={onAddSceneStart} onDeleteScene={onDeleteScene} onReorderScenes={onReorderScenes} />
+                        <div className="editor-sidebar">
+                            <InitScriptWidget gameDatabaseStatus={gameDatabaseStatus} setInitialSqlSource={onSetInitialSqlSource} />
                         </div>
                     </div>
                 )
@@ -585,27 +571,18 @@ function StatusView({status}: {status: Status}) {
 
 function MetaDataView({title, setTitle, teaser, setTeaser, copyright, setCopyright, onCommitMetaData}: {title: string, setTitle: (title: string) => void, teaser: string, setTeaser: (title: string) => void, copyright: string, setCopyright: (title: string) => void, onCommitMetaData: () => void }) {
     return (
-        <div className="editor-meta-data-view">
-            <InputGroup className="editor-meta-data-title">
-                <InputGroup.Text className="fw-bold">Name:</InputGroup.Text>
-                <Form.Control
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle( e.target.value )}
-                    onBlur={onCommitMetaData}
-                />
-            </InputGroup>
-            <div className="editor-meta-data-more">
-                <InputGroup>
-                    <InputGroup.Text className="fw-bold">Teaser:</InputGroup.Text>
+        <>
+            <div className="d-flex flex-column justify-content-between row-gap-default">
+                <InputGroup className="editor-meta-data-title">
+                    <InputGroup.Text className="fw-bold">Name:</InputGroup.Text>
                     <Form.Control
                         type="text"
-                        value={teaser}
-                        onChange={(e) => setTeaser( e.target.value )}
+                        value={title}
+                        onChange={(e) => setTitle( e.target.value )}
                         onBlur={onCommitMetaData}
                     />
                 </InputGroup>
-                <InputGroup>
+                <InputGroup className="editor-meta-data-copyright">
                     <InputGroup.Text className="fw-bold">Copyright:</InputGroup.Text>
                     <Form.Control
                         type="text"
@@ -615,83 +592,89 @@ function MetaDataView({title, setTitle, teaser, setTeaser, copyright, setCopyrig
                     />
                 </InputGroup>
             </div>
-        </div>
+            <div className="editor-meta-data-right">
+                <InputGroup>
+                    <InputGroup.Text className="fw-bold">Teaser:</InputGroup.Text>
+                    <Form.Control
+                        as="textarea"
+                        rows={3}
+                        value={teaser}
+                        onChange={(e) => { setTeaser( e.target.value); }}
+                        onBlur={onCommitMetaData} />
+                </InputGroup>
+            </div>
+        </>
     );
 }
 
-function InitScriptWidget({instance, initialSqlScript, setInitialSqlScript, onCommitInitialSqlScript}: {instance: EditorInstance, initialSqlScript: string, setInitialSqlScript: (initScript: string) => void, onCommitInitialSqlScript: () => void}) {
+function InitScriptWidget({gameDatabaseStatus, setInitialSqlSource}: {gameDatabaseStatus: GameDatabaseStatus, setInitialSqlSource: (initSqlSource: FileSource) => void}) {
+
+    const [showOpenModal, setShowOpenModal ] = useState(false);
+
+    const onSelect = (source: NamedFileSource) => {
+        setInitialSqlSource(source);
+    }
+
     return (
-        <Widget className={'widget-initscript'} bodyClassName={'widget-initscript-body'} title={'Initiales SQL-Skript'}>
-            <Form.Group>
-                <Form.Control
-                    as="textarea"
-                    rows={6}
-                    value={initialSqlScript}
-                    onChange={(e) => { setInitialSqlScript(e.target.value); }}
-                    onBlur={onCommitInitialSqlScript}
-                />
-            </Form.Group>
-        </Widget>
+        <>
+            <div>
+                <MultiWidget className={'widget-initscript'} title={'Datenbank'}>
+                    <div className='widget-initscript-load d-flex col-gap-default'>
+                        <div>
+                            <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
+                        </div>
+                        <GameDatabaseStatusShortView status={gameDatabaseStatus} />
+                    </div>
+                    {
+                        gameDatabaseStatus.kind === 'loaded' && (
+                            <div className='widget-initscript-schema'>
+                                <SchemaView schema={gameDatabaseStatus.data} />
+                            </div>
+                        )
+                    }
+                </MultiWidget>
+            </div>
+            <OpenFileModal title="Datenbank laden" fileUploadTitle='Datenbankdatei hochladen' fileIconType='file-sql' fileAccept='.sql' providedFileSources={[]} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
+        </>
     );
 }
 
-type SchemaStatusPending = { kind: 'pending' };
-type SchemaStatusLoaded  = { kind: 'loaded', data: Schema };
-type SchemaStatusFailed  = { kind: 'failed', error: RunInitScriptFail | ParseSchemaFail };
-type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | SchemaStatusFailed;
-
-function SchemaWidget({instance, initialSqlScriptCounter}: {instance: EditorInstance, initialSqlScriptCounter: number}) {
-    const [initScriptStatus, setInitScriptStatus] = useState<SchemaStatus>( { kind: 'pending' } );
-
-    // Update the schema status initially
-    useEffect(() => {
-        setInitScriptStatus({ kind: 'pending' });
-        
-        instance.getSchema().then((schemaResult) => {
-            // Success
-            if (schemaResult.ok) {
-                setInitScriptStatus({ kind: 'loaded', data: schemaResult.data });
-            }
-            // Fail
-            else {
-                // Assertion holds because inst status must be "active"
-                assert(schemaResult.error.kind === 'run-init-script' || schemaResult.error.kind === 'parse-schema');
-
-                setInitScriptStatus({ kind: 'failed', error: schemaResult.error });
-            }
-        });
-    }, [initialSqlScriptCounter]);
-
-    return (
-        <Widget className={'widget-schema'} bodyClassName='widget-schema-body' title={'Schema'}>
-            {initScriptStatus.kind === 'pending' ? (
-                <p className='initscript-status'>Lade...</p>
-            )
-            : initScriptStatus.kind === 'failed' ? (
-                initScriptStatus.error.kind === 'run-init-script' ? (
-                    <p className='initscript-status'>Fehler beim Ausführen des initialen SQL-Skripts: {initScriptStatus.error.details}</p>
-                )
-                : (
-                    <p className='initscript-status'>Fehler beim Einlesen des Schemas: {initScriptStatus.error.details}</p>
-                )
-            ): (
-                <>
-                <Table className="widget-schema-table">
-                    <tbody>
-                        {
-                            initScriptStatus.data.map((tableInfo) =>
-                                <TableInfoView key={tableInfo.name} tableInfo={tableInfo} />
-                            )
-                        }
-                    </tbody>
-                </Table>
-                <div className="widget-schema-caption">
-                    <small><u>unterstrichen</u>: Primärschlüssel&nbsp;&nbsp;&nbsp;<br/><em>kursiv</em>: Fremdschlüssel</small>
-                </div>
-                </>
-            )}
-        </Widget>
-    );
+function GameDatabaseStatusShortView({status}: {status: GameDatabaseStatus}) {
+    if (status.kind === 'pending') {
+        return (
+            <Alert className="game-database-status-short-view flex-fill" variant="info">
+                Lade...
+            </Alert>
+        );
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'fetch-init-script') {
+        return (
+            <Alert className="game-database-status-short-view" variant="danger">
+                Fehler beim Laden der Datei
+            </Alert>
+        );
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'run-init-script') {
+        return (
+            <Alert className="game-database-status-short-view" variant="danger">
+                Fehler beim Initialisieren
+            </Alert>
+        );
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'parse-schema') {
+        return (
+            <Alert className="game-database-status-short-view" variant="danger">
+                Fehler beim Lesen des Schemas
+            </Alert>
+        );
+    }
+    else {
+        return (
+            <Alert className="game-database-status-short-view" variant="success">
+                Datenbank erfolgreich geladen
+            </Alert>
+        );
+    }
 }
 
 function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneStart, onEditManipulateSceneStart, onAddSceneStart, onDeleteScene, onReorderScenes }: {scenes: EditableScene[], onEditTextSceneStart: (scene: EditableTextScene) => void, onEditSelectSceneStart: (scene: EditableSelectScene) => void, onEditManipulateSceneStart: (scene: EditableManipulateScene) => void, onAddSceneStart: () => void, onDeleteScene: (scene: EditableScene) => void, onReorderScenes: (start: number, end: number) => void }) {
@@ -775,7 +758,6 @@ function EditableTextSceneView({scene, onEdit, onDelete}: {scene: EditableTextSc
 }
 
 function EditableSelectSceneView({scene, onEdit, onDelete}: {scene: EditableSelectScene, onEdit: () => void, onDelete: () => void}) {
-    console.log(scene);
     return (
         <ListGroup className="editable-select-scene-view">
             <EditableSceneViewHeader bsVariant="primary" title={<strong><em>Select</em></strong>} onEdit={onEdit} onDelete={onDelete} />
@@ -787,16 +769,34 @@ function EditableSelectSceneView({scene, onEdit, onDelete}: {scene: EditableSele
                     <p>
                         <strong>SQL-Lösung</strong>
                     </p>
-                    {
-                        scene.isOrderRelevant ? <p><strong>Sortierung ist relevant</strong></p> : null
-                    }
                 </div>
-                <SyntaxHighlighter language="sql">
+                <SyntaxHighlighter language="sql" style={prismStyle} customStyle={customStyle}>
                     {scene.sqlSol}
                 </SyntaxHighlighter>
             </ListGroup.Item>
             {
-                scene.sqlPlaceholder !== '' ? (
+                (scene.isRowOrderRelevant || scene.isColOrderRelevant || scene.areColNamesRelevant) && (
+                    <ListGroup.Item className="d-flex bg-primary bg-opacity-25 border-primary col-gap-default">
+                        {
+                            scene.isRowOrderRelevant ? (
+                                <Badge>Zeilen: Reihenfolge relevant</Badge>
+                            ) : null
+                        }
+                        {
+                            scene.isColOrderRelevant ? (
+                                <Badge>Spalten: Reihenfolge relevant</Badge>
+                            ) : null
+                        }
+                        {
+                            scene.areColNamesRelevant ? (
+                                <Badge>Spalten: Bezeichnungen relevant</Badge>
+                            ) : null
+                        }
+                    </ListGroup.Item>
+                )
+            }
+            {
+                scene.sqlPlaceholder !== '' && (
                     <ListGroup.Item className="bg-primary bg-opacity-25 border-primary">
                         <p>
                             <strong>Platzhalter für das Abfragefeld</strong>
@@ -805,7 +805,7 @@ function EditableSelectSceneView({scene, onEdit, onDelete}: {scene: EditableSele
                             {scene.sqlPlaceholder}
                         </SyntaxHighlighter>
                     </ListGroup.Item>
-                ) : null
+                )
             }
         </ListGroup>
     );
@@ -834,6 +834,18 @@ function EditableManipulateSceneView({scene, onEdit, onDelete}: {scene: Editable
                     {scene.sqlCheck}
                 </SyntaxHighlighter>
             </ListGroup.Item>
+            {
+                scene.sqlPlaceholder !== '' && (
+                    <ListGroup.Item className="bg-success bg-opacity-25 border-success">
+                        <p>
+                            <strong>Platzhalter für das Abfragefeld</strong>
+                        </p>
+                        <SyntaxHighlighter language="sql">
+                            {scene.sqlPlaceholder}
+                        </SyntaxHighlighter>
+                    </ListGroup.Item>
+                )
+            }
         </ListGroup>
     );
 }
@@ -843,8 +855,8 @@ function EditableSceneViewHeader({bsVariant, title, onEdit, onDelete}: {bsVarian
         <ListGroup.Item className={classNames('editable-scene-view-header', 'd-flex', 'justify-content-between', 'align-items-start', 'bg-'+bsVariant, 'bg-opacity-50', 'border-'+bsVariant)}>
             <p>{title}</p>
             <div>
-                <ClickableIcon type='edit' onClick={onEdit} disabled={false} />
-                <ClickableIcon type='close' onClick={onDelete} disabled={false} />
+                <ClickableIcon type='edit' onClick={onEdit} />
+                <ClickableIcon type='close' onClick={onDelete} />
             </div>
         </ListGroup.Item>
     );
@@ -853,7 +865,7 @@ function EditableSceneViewHeader({bsVariant, title, onEdit, onDelete}: {bsVarian
 function AddSceneButton({ onAdd }: { onAdd: () => void }) {
     return (
         <div className="add-scene-button">
-            <ClickableIcon type={'add'} disabled={false} onClick={onAdd}  />
+            <ClickableIcon type={'add'} size={30} onClick={onAdd}  />
         </div>
     );
 }
@@ -881,14 +893,14 @@ function EditTextSceneModal ({ scene, onHide, onSaveAndHide }: { scene: Editable
     };
 
     return (
-        <Modal className="edit-text-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal className="edit-text-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Text-Szene bearbeiten</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
                     <Form.Group>
-                        <Form.Label>Text:</Form.Label>
+                        <Form.Label><strong>Text:</strong></Form.Label>
                         <Form.Control
                             as="textarea"
                             rows={8}
@@ -905,15 +917,18 @@ function EditTextSceneModal ({ scene, onHide, onSaveAndHide }: { scene: Editable
                     Speichern
                 </Button>
             </Modal.Footer>
-        </Modal>
+        </EskuelModal>
     );
 }
 
 function EditSelectSceneModal ({ scene, onHide, onSaveAndHide }: { scene: EditableSelectScene | null, onHide: () => void, onSaveAndHide: (scene: EditableSelectScene) => void }) {
     const [editedText, setEditedText] = useState("");
     const [editedSqlSol, setEditedSqlSol] = useState("");
+    const [editedIsRowOrderRelevant, setEditedIsRowOrderRelevant] = useState(false);
+    const [editedIsColOrderRelevant, setEditedIsColOrderRelevant] = useState(false);
+    const [editedAreColNamesRelevant, setEditedAreColNamesRelevant] = useState(false);
+    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
     const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
-    const [editedIsOrderRelevant, setEditedIsOrderRelevant] = useState(false);
 
     const handleShow = () => {
         // Assertion holds because the modal is only shown when a text-scene-to-edit is set
@@ -921,55 +936,97 @@ function EditSelectSceneModal ({ scene, onHide, onSaveAndHide }: { scene: Editab
 
         setEditedText(scene.text);
         setEditedSqlSol(scene.sqlSol);
+        setEditedIsRowOrderRelevant(scene.isRowOrderRelevant);
+        setEditedIsColOrderRelevant(scene.isColOrderRelevant);
+        setEditedAreColNamesRelevant(scene.areColNamesRelevant);
+        setEditedUseSqlPlaceholder(scene.sqlPlaceholder != '');
         setEditedSqlPlaceholder(scene.sqlPlaceholder);
-        setEditedIsOrderRelevant(scene.isOrderRelevant);
     }
 
     const handleSave = () => {
         // Assertion holds because the modal is only shown when a text-scene-to-edit is set
         assert(scene !== null);
 
-        onSaveAndHide({ ...scene, text: editedText, sqlSol: editedSqlSol, sqlPlaceholder: editedSqlPlaceholder, isOrderRelevant: editedIsOrderRelevant });
+        onSaveAndHide({ ...scene, text: editedText, sqlSol: editedSqlSol, sqlPlaceholder: editedSqlPlaceholder, isRowOrderRelevant: editedIsRowOrderRelevant, isColOrderRelevant: editedIsColOrderRelevant, areColNamesRelevant: editedAreColNamesRelevant});
     };
 
     return (
-        <Modal className="edit-select-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal className="edit-select-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Select-Szene bearbeiten</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
-                    <Form.Group>
-                        <Form.Label>Text:</Form.Label>
+                    <div>
+                        <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
                         <Form.Control
+                            id='edit-select-scene-text'
                             as="textarea"
-                            rows={8}
+                            rows={5}
                             value={editedText}
                             onChange={(e) => { setEditedText(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>SQL-Lösung:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={4}
-                            value={editedSqlSol}
-                            onChange={(e) => { setEditedSqlSol(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>Platzhalter für die Eingabe in das Abfragefeld:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={4}
-                            value={editedSqlPlaceholder}
-                            onChange={(e) => { setEditedSqlPlaceholder(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label></Form.Label>
-                        <Form.Check
-                            type="switch"
-                            label="Sortierung der Zeilen für die Lösung relevant?"
-                        />
-                    </Form.Group>
+                    </div>
+                    <div>
+                        <label className='mb-2'><strong>SQL-Lösung:</strong></label>
+                        <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
+                    </div>
+                    <div>
+                        <label className='mb-2'><strong>Optionen:</strong></label>
+                        <div className='edit-scene-options'>
+                            <Form.Check
+                                id={'edit-select-scene-is-row-order-relevant'}
+                                type="switch"
+                                checked={editedIsRowOrderRelevant}
+                                onChange={(e) => { setEditedIsRowOrderRelevant(e.target.checked); }}
+                            />
+                            <div>
+                                <label htmlFor={'edit-select-scene-is-row-order-relevant'}>
+                                    Zeilen: Reihenfolge für die Lösung relevant?
+                                </label>
+                            </div>
+                            <Form.Check
+                                id={'edit-select-scene-is-col-order-relevant'}
+                                type="switch"
+                                checked={editedIsColOrderRelevant}
+                                onChange={(e) => { setEditedIsColOrderRelevant(e.target.checked); }}
+                            />
+                            <div>
+                                <label htmlFor={'edit-select-scene-is-col-order-relevant'}>
+                                    Spalten: Reihenfolge für die Lösung relevant?
+                                </label>
+                            </div>
+                            <Form.Check
+                                id={'edit-select-scene-are-col-names-relevant'}
+                                type="switch"
+                                checked={editedAreColNamesRelevant}
+                                onChange={(e) => { setEditedAreColNamesRelevant(e.target.checked); }}
+                            />
+                            <div>
+                                <label htmlFor={'edit-select-scene-are-col-names-relevant'}>
+                                    Spalten: Bezeichnungen für die Lösung relevant?
+                                </label>
+                            </div>
+                            <Form.Check
+                                id={'edit-select-scene-use-sql-placeholder'}
+                                type="switch"
+                                checked={editedUseSqlPlaceholder}
+                                onChange={(e) => {
+                                    if (!e.target.checked) {
+                                        setEditedSqlPlaceholder('');
+                                    }
+                                    setEditedUseSqlPlaceholder(e.target.checked);
+                                }}
+                            />
+                            <div>
+                                <Form.Group>
+                                    <label htmlFor={'edit-select-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
+                                    { editedUseSqlPlaceholder &&
+                                        <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
+                                    }
+                                </Form.Group>
+                            </div>
+                        </div>
+                    </div>
                 </Form>
             </Modal.Body>
             <Modal.Footer>
@@ -980,7 +1037,7 @@ function EditSelectSceneModal ({ scene, onHide, onSaveAndHide }: { scene: Editab
                     Speichern
                 </Button>
             </Modal.Footer>
-        </Modal>
+        </EskuelModal>
     );
 }
 
@@ -988,6 +1045,7 @@ function EditManipulateSceneModal({ scene, onHide, onSaveAndHide }: { scene: Edi
     const [editedText, setEditedText] = useState("");
     const [editedSqlSol, setEditedSqlSol] = useState("");
     const [editedSqlCheck, setEditedSqlCheck] = useState("");
+    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
     const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
 
     const handleShow = () => {
@@ -997,6 +1055,7 @@ function EditManipulateSceneModal({ scene, onHide, onSaveAndHide }: { scene: Edi
         setEditedText(scene.text);
         setEditedSqlSol(scene.sqlSol);
         setEditedSqlCheck(scene.sqlCheck);
+        setEditedUseSqlPlaceholder(scene.sqlPlaceholder != '');
         setEditedSqlPlaceholder(scene.sqlPlaceholder);
     }
 
@@ -1008,44 +1067,53 @@ function EditManipulateSceneModal({ scene, onHide, onSaveAndHide }: { scene: Edi
     };
 
     return (
-        <Modal className="edit-manipulate-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal className="edit-manipulate-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Manipulate-Szene bearbeiten</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
-                    <Form.Group>
-                        <Form.Label>Text:</Form.Label>
+                    <div>
+                        <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
                         <Form.Control
+                            id='edit-select-scene-text'
                             as="textarea"
-                            rows={8}
+                            rows={5}
                             value={editedText}
                             onChange={(e) => { setEditedText(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>SQL-Lösung:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={4}
-                            value={editedSqlSol}
-                            onChange={(e) => { setEditedSqlSol(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>SQL-Check-Abfrage:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={4}
-                            value={editedSqlCheck}
-                            onChange={(e) => { setEditedSqlCheck(e.target.value); }} />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>Platzhalter für die Eingabe in das Abfragefeld:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={4}
-                            value={editedSqlPlaceholder}
-                            onChange={(e) => { setEditedSqlPlaceholder(e.target.value); }} />
-                    </Form.Group>
+                    </div>
+                    <div>
+                        <label className='mb-2'><strong>SQL-Lösung:</strong></label>
+                        <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
+                    </div>
+                    <div>
+                        <label className='mb-2'><strong>SQL-Check-Abfrage:</strong></label>
+                        <QueryEditor sql={editedSqlCheck} setSql={setEditedSqlCheck} height={100}  />
+                    </div>
+                    <div>
+                        <label className='mb-2'><strong>Optionen:</strong></label>
+                        <div className='edit-scene-options'>
+                            <Form.Check
+                                id={'edit-manipulate-scene-use-sql-placeholder'}
+                                type="switch"
+                                checked={editedUseSqlPlaceholder}
+                                onChange={(e) => {
+                                    if (!e.target.checked) {
+                                        setEditedSqlPlaceholder('');
+                                    }
+                                    setEditedUseSqlPlaceholder(e.target.checked);
+                                }}
+                            />
+                            <div>
+                                <Form.Group>
+                                    <label htmlFor={'edit-manipulate-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
+                                    { editedUseSqlPlaceholder &&
+                                        <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
+                                    }
+                                </Form.Group>
+                            </div>
+                        </div>
+                    </div>
                 </Form>
             </Modal.Body>
             <Modal.Footer>
@@ -1056,7 +1124,7 @@ function EditManipulateSceneModal({ scene, onHide, onSaveAndHide }: { scene: Edi
                     Speichern
                 </Button>
             </Modal.Footer>
-        </Modal>
+        </EskuelModal>
     );
 }
 
@@ -1075,21 +1143,21 @@ function AddSceneModal({ show, onHide, onSaveAndHide }: { show: boolean, onHide:
         const scene: Scene = sceneType === 'text'
             ? { type: 'text', text: editedText }
             : sceneType === 'select'
-            ? { type: 'select', text: editedText, sqlSol: '', sqlPlaceholder: '', isOrderRelevant: false }
+            ? { type: 'select', text: editedText, sqlSol: '', sqlPlaceholder: '', isRowOrderRelevant: false, isColOrderRelevant: false, areColNamesRelevant: false }
             : { type: 'manipulate', text: editedText, sqlSol: '', sqlCheck: '', sqlPlaceholder: '' };
 
         onSaveAndHide(scene);
     };
 
     return (
-        <Modal className="edit-manipulate-scene-modal" show={show} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal className="edit-manipulate-scene-modal" show={show} onHide={onHide} onShow={handleShow} size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Szene hinzufügen</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
                     <Form.Group>
-                        <Form.Label>Choose a scene type:</Form.Label>
+                        <Form.Label><strong>Wähle Szenentyp:</strong></Form.Label>
                         <Form.Check
                             type="radio"
                             label="Text"
@@ -1119,7 +1187,7 @@ function AddSceneModal({ show, onHide, onSaveAndHide }: { show: boolean, onHide:
                         />
                     </Form.Group>
                     <Form.Group>
-                        <Form.Label>Text:</Form.Label>
+                        <Form.Label><strong>Text:</strong></Form.Label>
                         <Form.Control
                             as="textarea"
                             rows={8}
@@ -1136,7 +1204,7 @@ function AddSceneModal({ show, onHide, onSaveAndHide }: { show: boolean, onHide:
                     Hinzufügen
                 </Button>
             </Modal.Footer>
-        </Modal>
+        </EskuelModal>
     );
 }
 

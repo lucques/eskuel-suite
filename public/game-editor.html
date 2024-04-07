@@ -17,12 +17,11 @@
         document.addEventListener('DOMContentLoaded', function () {       
             const g = new eskuelSuite.MultiEditorComponent('editor');
 
-            g.addAndOpenUrl('../res/games/baufirma/baufirma.xml');
-
-            g.addUrl('../res/games/ozean/ozean.xml');
-            g.addUrl('../res/games/jack-frost/jack-frost.xml');
-            g.addUrl('../res/games/sql-jungle/sql-jungle.xml');
-            g.addUrl('../res/games/island/island.xml');
+            g.addUrl('./res/games/baufirma/baufirma.xml');
+            g.addUrl('./res/games/jack-frost/jack-frost.xml');
+            g.addUrl('./res/games/ozean/ozean.xml');
+            g.addUrl('./res/games/island/island.xml');
+            g.addUrl('./res/games/sql-jungle/sql-jungle.xml');
 
             g.init();
         });

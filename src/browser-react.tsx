@@ -7,12 +7,6 @@ import { Alert, Button, Card, CloseButton, Form, ListGroup, Modal, Table} from '
 // classnames
 import classNames from 'classnames';
 
-// monaco
-// import * as monaco from 'monaco-editor';
-// import { loader } from '@monaco-editor/react';
-// import Editor from '@monaco-editor/react';
-// loader.config({ monaco });
-
 // react-grid-layout
 import GridLayout from "react-grid-layout";
 import 'react-grid-layout/css/styles.css';
@@ -34,7 +28,8 @@ import { BrowserInstance, Status } from './browser-instance';
 import { RunInitScriptFail, FetchInitScriptFail, SqlResult, ParseSchemaFail, sqlResultHash } from "./sql-js-api";
 
 import { FileSource, NamedFileSource, assert } from "./util";
-import { TableInfoView, Widget, ResultTableView, ClickableIcon, OpenModal, IconActionButton, IconLinkButton } from './react';
+import { Widget, ResultTableView, ClickableIcon, OpenFileModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor } from './react';
+import { GameDatabaseStatus, SchemaStatus } from './game-pure';
 
 
 //////////////////////
@@ -201,7 +196,6 @@ export function MultiBrowserComponentView({initialInstances, fileSources}: {init
                     {panels}
                 </Tabs>
             </div>
-            <EditDbModal instance={editedInstanceIndex !== null ? instances[editedInstanceIndex] : null} onHide={onEditEnd} onSaveAndHide={onEditEndWithSave} />
         </>
     );
 }
@@ -214,17 +208,23 @@ function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onEdi
         <>
             <div className="header">
                 <ul className="header-meta list-group list-group-horizontal">
-                    <li className="header-name list-group-item"><strong>SQL-Browser</strong></li>
+                    <li className="header-name list-group-item">
+                        <strong>SQL-Browser</strong>
+                    </li>
                     <li className="header-toolbox list-group-item flex-fill">
                         <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
-                        <IconActionButton type='edit' onClick={() => { if(viewedInstanceIndex !== null) { onEditStart(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
+                        {
+                            // Disabled: Edit should not be possible anymore.
+                            // TODO: Remove functionality (= currently dead code)
+                            /* <IconActionButton type='edit' onClick={() => { if(viewedInstanceIndex !== null) { onEditStart(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} /> */
+                        }
                     </li>
                     <li className="header-home list-group-item">
                         <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
-                <OpenModal title="Datenbank laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
-            </div>             
+            </div>
+            <OpenFileModal title="Datenbank laden" fileUploadTitle='Datenbankdatei hochladen' fileIconType='file-sql' fileAccept='.sql' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
         </>
     );
 }
@@ -319,85 +319,53 @@ function StatusView({status}: {status: Status}) {
 }
 
 function QueryWidget({status, onSubmit}: {status: Status, onSubmit: (sql: string) => void}) {
-    const [sql, setSql] = useState('SELECT * FROM kunde');
+    const [sql, setSql] = useState('SELECT * FROM fahrlehrer');
 
     return (
         <Widget className={'widget-query'} title="SQL-Abfrage">
-            <div className={'widget-query-editor'}>
-                <Form.Control
-                    as="textarea"
-                    rows={6}
-                    value={sql}
-                    onChange={(e) => { setSql(e.target.value); }} />
-
+            <QueryEditor sql={sql} setSql={setSql} height={170} />
+            <div>
+                <Button variant="primary" onClick={() => { onSubmit(sql); }} disabled={status.kind !== 'active'}>Ausführen</Button>
             </div>
-            <Button variant="primary" onClick={() => { onSubmit(sql); }} disabled={status.kind !== 'active'}>Ausführen</Button>
         </Widget>
     );
-
-    // <Editor
-    //     height="100%"
-    //     language="sql"
-    //     onChange={(value, event) => { setSql(value ?? ''); }}
-    //     value={sql}
-    //     options={
-    //         {
-    //             fontSize: 20,
-    //             lineNumbers: 'off',
-    //             minimap: { enabled: false },
-    //             automaticLayout: true,
-    //             readOnly: false
-    //         }
-    //     } />
 }
 
-type SchemaStatusPending = { kind: 'pending' };
-type SchemaStatusLoaded  = { kind: 'loaded', data: Schema };
-type SchemaStatusFailed  = { kind: 'failed', error: FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail };
-type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | SchemaStatusFailed;
-
 function SchemaWidget({instance, status}: {instance: BrowserInstance, status: Status}) {
-    const [schemaStatus, setSchemaStatus] = useState<SchemaStatus>( { kind: 'pending' } );
+    const [gameDatabaseStatus, setGameDatabaseStatus] = useState<GameDatabaseStatus>( { kind: 'pending' } );
 
     // Update the schema status when the inst status changes
     useEffect(() => {
-        setSchemaStatus({ kind: 'pending' });
+        setGameDatabaseStatus({ kind: 'pending' });
 
         instance.getSchema().then((schemaResult) => {
             // Success
             if (schemaResult.ok) {
-                setSchemaStatus({ kind: 'loaded', data: schemaResult.data });
+                setGameDatabaseStatus({ kind: 'loaded', data: schemaResult.data });
             }
             // Failure (various options)
             else {
-                setSchemaStatus({ kind: 'failed', error: schemaResult.error });
+                setGameDatabaseStatus({ kind: 'failed', error: schemaResult.error });
             }
         });
     }, [status]);
 
     return (
         <Widget className={'widget-schema'} title={'Schema'}>
-            {schemaStatus.kind === 'pending' ? (
-                <p className='schema-status'>Lade...</p>
-            )
-            : schemaStatus.kind === 'failed' ? (
-                schemaStatus.error.kind === 'parse-schema' ? (
-                    <p className='schema-status'>Fehler beim Einlesen des Schemas: {schemaStatus.error.details}</p>
+            {
+                gameDatabaseStatus.kind === 'pending' ? (
+                    <p className='schema-status'>Lade...</p>
                 )
-                : (
-                    <p className='schema-status'>Datenbankfehler</p>
-                )
-            ) : (
-                <Table>
-                    <tbody>
-                        {
-                            schemaStatus.data.map((tableInfo) =>
-                                <TableInfoView key={tableInfo.name} tableInfo={tableInfo} />
-                            )
-                        }
-                    </tbody>
-                </Table>
-            )}
+                : gameDatabaseStatus.kind === 'failed' ? (
+                    gameDatabaseStatus.error.kind === 'parse-schema' ? (
+                        <p className='schema-status'>Fehler beim Einlesen des Schemas: {gameDatabaseStatus.error.details}</p>
+                    )
+                    : (
+                        <p className='schema-status'>Datenbankfehler</p>
+                    )
+                ) :
+                    <SchemaView schema={gameDatabaseStatus.data} />
+            }
         </Widget>
     );
 }
@@ -453,87 +421,4 @@ function ResultErrorView({sql, message, onClose}: {sql: string, message: string,
             </ListGroup.Item>
         </ListGroup>
     );
-}
-
-
-////////////
-// Modals //
-////////////
-
-export function EditDbModal ({ instance, onHide, onSaveAndHide }: { instance: BrowserInstance | null, onHide: () => void, onSaveAndHide: (name: string, sql: string) => void }) {
-    const [editedName, setEditedName] = useState("");
-    const [editedSql,  setEditedSql]  = useState("");
-
-    const handleShow = () => {
-        // Assertion holds because the modal is only shown when an instance-to-edit is set
-        assert(instance !== null);
-
-        setEditedName(instance.getName());
-        instance.getInitialSqlScript().then((sqlResult) => {
-            // Success
-            if (sqlResult.ok) {
-                setEditedSql(sqlResult.data);
-            }
-            // Fetch failure
-            else {
-                // Handle by setting empty string
-                setEditedSql('-- SQL-Skript konnte nicht geladen werden.');
-            }
-        });
-    }
-
-    const handleSave = () => {
-        onSaveAndHide(editedName, editedSql);
-    };
-
-    return (
-        <Modal className="edit-db-modal" show={instance !== null} onHide={onHide} onShow={handleShow} size="lg">
-            <Modal.Header closeButton>
-                <Modal.Title>Datenbank bearbeiten</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form>
-                    <Form.Group>
-                        <Form.Label>Name:</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={editedName}
-                            onChange={(e) => setEditedName( e.target.value )}
-                        />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label>Initiales SQL-Skript:</Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={14}
-                            value={editedSql}
-                            onChange={(e) => { setEditedSql(e.target.value); }} />
-                    </Form.Group>
-                </Form>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>
-                    Schließen
-                </Button>
-                <Button variant="primary" onClick={handleSave}>
-                    Speichern
-                </Button>
-            </Modal.Footer>
-        </Modal>
-    );
-
-    // <Editor
-    // height="450px"
-    // language="sql"
-    // onChange={(value, event) => { setEditedSql(value ?? ''); }}
-    // value={editedSql}
-    // options={
-    //     {
-    //         fontSize: 20,
-    //         lineNumbers: 'off',
-    //         minimap: { enabled: false },
-    //         automaticLayout: true,
-    //         readOnly: false
-    //     }
-    // } />
 }

@@ -47,8 +47,10 @@ export class MultiBrowserComponent {
         const root = createRoot(div);
         root.render(
             <React.StrictMode>
-                <div className='eskuel app-browser'>
-                    <MultiBrowserComponentView initialInstances={this.instances} fileSources={this.fileSources} />
+                <div className='eskuel'>
+                    <div className='app-browser'>
+                        <MultiBrowserComponentView initialInstances={this.instances} fileSources={this.fileSources} />
+                    </div>
                 </div>
             </React.StrictMode>
         );

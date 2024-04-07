@@ -1,7 +1,13 @@
 import _ from 'lodash';
 import { Fail, Success, assert, isFail, isSuccess } from './util';
-import { SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
+import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
+import { Schema } from './schema';
 
+import * as he from 'he';
+const heOptions = {
+    // useNamedReferences: true,
+    // allowUnsafeSymbols: false
+};
 
 //////////////////////////////////
 // Failures during game loading //
@@ -10,6 +16,21 @@ import { SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
 export type FetchXMLFail = { kind: 'fetch-xml', url: string }
 export type ParseXMLFail = { kind: 'parse-xml', details: string }
 export type XMLFail = FetchXMLFail | ParseXMLFail;
+
+
+////////////////////////////////
+// Status of game db + schema //
+////////////////////////////////
+
+export type SchemaStatusPending = { kind: 'pending' };
+export type SchemaStatusLoaded  = { kind: 'loaded', data: Schema };
+export type SchemaStatusFailed  = { kind: 'failed', error: ParseSchemaFail };
+export type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | SchemaStatusFailed;
+
+export type GameDatabaseStatusPending = { kind: 'pending' };
+export type GameDatabaseStatusLoaded  = { kind: 'loaded', data: Schema };
+export type GameDatabaseStatusFailed  = { kind: 'failed', error: FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail };
+export type GameDatabaseStatus = GameDatabaseStatusPending | GameDatabaseStatusLoaded | GameDatabaseStatusFailed;
 
 
 /////////////////////
@@ -77,9 +98,26 @@ export class Game {
     }
 }
 
-export type TextScene   = { type: 'text';   text: string }
-export type SelectScene = { type: 'select'; text: string; sqlSol: string; sqlPlaceholder: string; isOrderRelevant: boolean }
-export type ManipulateScene = { type: 'manipulate', text: string; sqlSol: string; sqlCheck: string; sqlPlaceholder: string }
+export type TextScene   = {
+    type: 'text';
+    text: string
+}
+export type SelectScene = {
+    type: 'select';
+    text: string;
+    sqlSol: string;
+    sqlPlaceholder: string;
+    isRowOrderRelevant: boolean;
+    isColOrderRelevant: boolean;
+    areColNamesRelevant: boolean
+}
+export type ManipulateScene = {
+    type: 'manipulate',
+    text: string;
+    sqlSol: string;
+    sqlCheck: string;
+    sqlPlaceholder: string
+}
 export type Scene = TextScene | SelectScene | ManipulateScene;
 
 export type GameState = {
@@ -178,14 +216,19 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
 
             const sqlPlaceholder = sceneNode.querySelector('sql-placeholder')?.textContent?.trim() ?? '';
 
-            const isOrderRelevant = sceneNode.getAttribute('is-order-relevant')?.trim() === 'true';
+            const isRowOrderRelevant = sceneNode.getAttribute('is-row-order-relevant')?.trim() === 'true';
+            const isColOrderRelevant = sceneNode.getAttribute('is-col-order-relevant')?.trim() === 'true';
+            const areColNamesRelevant = sceneNode.getAttribute('are-col-names-relevant')?.trim() === 'true';
+
 
             return {ok: true, data: {
                 type: 'select',
                 text: textNode.textContent?.trim() ?? '',
                 sqlSol: sqlSolutionNode.textContent?.trim() ?? '',
                 sqlPlaceholder,
-                isOrderRelevant
+                isRowOrderRelevant: isRowOrderRelevant,
+                isColOrderRelevant: isColOrderRelevant,
+                areColNamesRelevant
             } };
         }
         else if (sceneNode.nodeName === 'manipulate-scene') {
@@ -235,28 +278,39 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
 export function gameToXML(g: Game): string {
     const scenes = g.scenes.map(scene => {
         if (scene.type === 'text') {
-            return `<text-scene><text>${scene.text}</text></text-scene>`;
+            return `        <text-scene>
+            <text>${he.encode(scene.text, heOptions)}</text>
+        </text-scene>`;
         }
         else if (scene.type === 'select') {
-            return `<select-scene is-order-relevant="${scene.isOrderRelevant}"><text>${scene.text}</text><sql-solution>${scene.sqlSol}</sql-solution><sql-placeholder>${scene.sqlPlaceholder}</sql-placeholder></select-scene>`;
+            return `        <select-scene is-row-order-relevant="${scene.isRowOrderRelevant ? 'true' : 'false'}" is-col-order-relevant="${scene.isColOrderRelevant ? 'true' : 'false'}" are-col-names-relevant="${scene.areColNamesRelevant ? 'true' : 'false'}">
+            <text>${he.encode(scene.text, heOptions)}</text>
+            <sql-solution>${he.encode(scene.sqlSol, heOptions)}</sql-solution>
+            <sql-placeholder>${he.encode(scene.sqlPlaceholder, heOptions)}</sql-placeholder>
+        </select-scene>`;
         }
         else {
-            return `<manipulate-scene><text>${scene.text}</text><sql-solution>${scene.sqlSol}</sql-solution><sql-check>${scene.sqlCheck}</sql-check><sql-placeholder>${scene.sqlPlaceholder}</sql-placeholder></manipulate-scene>`;
+            return `        <manipulate-scene>
+            <text>${he.encode(scene.text, heOptions)}</text>
+            <sql-solution>${he.encode(scene.sqlSol, heOptions)}</sql-solution>
+            <sql-check>${he.encode(scene.sqlCheck, heOptions)}</sql-check>
+            <sql-placeholder>${he.encode(scene.sqlPlaceholder, heOptions)}</sql-placeholder>
+        </manipulate-scene>`;
         }
-    }).join('');
+    }).join("\n");
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <game>
     <head>
-        <title>${g.title}</title>
-        <teaser>${g.teaser}</teaser>
-        <copyright>${g.copyright}</copyright>
+        <title>${he.encode(g.title, heOptions)}</title>
+        <teaser>${he.encode(g.teaser, heOptions)}</teaser>
+        <copyright>${he.encode(g.copyright, heOptions)}</copyright>
     </head>
     <scenes>
-        ${scenes}
+${scenes}
     </scenes>
     <initial-sql-script>
-        ${g.initialSqlScript}
+${he.encode(g.initialSqlScript, heOptions)}
     </initial-sql-script>
 </game>`;
 }
@@ -266,39 +320,53 @@ export function gameToXML(g: Game): string {
 // Equality-checking //
 ///////////////////////
 
-export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.QueryExecResult, isOrderRelevant: boolean) {
-    // Number of rows must match
-    if (a.values.length != b.values.length) {
+export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.QueryExecResult, isRowOrderRelevant: boolean, isColOrderRelevant: boolean, areColNamesRelevant: boolean): boolean {
+    // Number of rows must match; number of columns too.
+    if (a.values.length != b.values.length || a.columns.length != b.columns.length) {
         return false;
     }
 
-    const aColumns = _.map(a.columns, s => s.toLowerCase());
-    const bColumns = _.map(b.columns, s => s.toLowerCase());
-
-    // Col names must match
-    if (!_.isEqual(_.sortBy(aColumns), _.sortBy(bColumns))) {
+    // Potentially, col names must match
+    if (areColNamesRelevant && !_.isEqual(_.sortBy(a.columns), _.sortBy(b.columns))) {
         return false;
     }
     
-    const permutationen = computePermutations(aColumns, bColumns);
+    // If col order is relevant, take identity permutation
+    // Else,
+    //   − if col names relevant,   compute permutations only on the col names 
+    //   − if col names irrelevant, wipe out col names and compute *all* permutations
+    const permutations =
+        isColOrderRelevant
+        ? [Array.from({length: a.columns.length}, (_, i) => i)] // Identity permutation
+        : areColNamesRelevant
+          ? computePermutations(a.columns, b.columns)
+          : computePermutations(a.columns.map(() => ''), b.columns.map(() => ''));
 
-    // It is only relevant whether *a* permutation yields row-wise equality. 
+    // It is only relevant whether *some* of the permutations yields row-wise equality. 
     let existsCorrectPermutation = false;
 
-    for (const permutation of permutationen)
+    for (const permutation of permutations)
     {
         // Because sorting is in-place, make copies first.
         const aValues = _.cloneDeep(a.values);
         const bValues = _.cloneDeep(b.values);
 
-        // Permute.
+        // If col names are relevant, permute them and check.
+        if (areColNamesRelevant) {
+            const aColumns = permute(a.columns, permutation);
+            if (!_.isEqual(aColumns, b.columns)) {
+                continue;
+            }
+        }
+
+        // Permute every row.
         for (let i = 0; i < aValues.length; i++) {
             aValues[i] = permute(aValues[i], permutation);
         }
 
         // If order is irrelevant, sort `a` and `b` in the same way.
-        // This is a standard JS sort (treats entries as strings). Important here is that permutations happened *before*.
-        if (!isOrderRelevant) {
+        // This is a standard JS sort (treats entries as strings). Important here is that permutation happened *before*.
+        if (!isRowOrderRelevant) {
             aValues.sort();
             bValues.sort();
         }
@@ -322,7 +390,13 @@ export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.Query
     return existsCorrectPermutation;
 }
 
+/**
+ * `source` and `target` contain the same elements, but in potentially different
+ * order. There may be duplicates! That's when there are multiple permutations.
+ */
 function computePermutations(source: string[], target: string[]): number[][] {
+    assert(_.isEqual(_.sortBy(source), _.sortBy(target)), 'Columns must match');
+
     function computePermutationsRec(source: [number, string][], target: [number, string][]): number[][] {
         // No need to clone here since TypeScript ensures immutability in this context
         if (target.length === 0) {

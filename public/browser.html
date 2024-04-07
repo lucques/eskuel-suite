@@ -15,19 +15,21 @@
 <body>
     <script>
         document.addEventListener('DOMContentLoaded', function () {       
-    
+
             const b = new eskuelSuite.MultiBrowserComponent('browser');
 
-            b.addAndOpenUrl('res/dbs/onlineshop.sql');
-            b.addAndOpenUrl('res/dbs/fahrschule.sql');
+            b.addAndOpenUrl('./res/dbs/fahrschule.sql');
+            b.addAndOpenUrl('./res/dbs/onlineshop.sql');
 
-            b.addUrl('res/dbs/fahrschule-minimal.sql');
-            b.addUrl('res/dbs/onlineshop.sql');
-            b.addUrl('res/dbs/onlineshop-minimal.sql');
-            b.addUrl('res/dbs/eisdiele.sql');
-            b.addUrl('res/dbs/obst-gemuese.sql');
-            b.addUrl('res/dbs/cafe.sql');
-            b.addUrl('res/dbs/pizzeria-mit-redundanz.sql');
+            b.addUrl('./res/dbs/eisdiele.sql');
+            b.addUrl('./res/dbs/obst-gemuese.sql');
+            b.addUrl('./res/dbs/cafe.sql');
+            b.addUrl('./res/dbs/pizzeria-mit-redundanz.sql');
+            b.addUrl('./res/games/baufirma/baufirma.sql');
+            b.addUrl('./res/games/island/island.sql');
+            b.addUrl('./res/games/jack-frost/jack-frost.sql');
+            b.addUrl('./res/games/ozean/ozean.sql');
+            b.addUrl('./res/games/sql-jungle/sql-jungle.sql');
     
             b.init();
         });

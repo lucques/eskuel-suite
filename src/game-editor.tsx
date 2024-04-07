@@ -26,9 +26,6 @@ import 'react-resizable/css/styles.css';
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 
-// react-syntax-highlighter
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-
 // Custom CSS
 import './screen.css';
 
@@ -65,10 +62,12 @@ export class GameEditorComponent {
         const root = createRoot(div);
         root.render(
             <React.StrictMode>
-                <div className='eskuel app-game-editor'>
-                    <EditorInstanceView instance={this.instance} status={{
-                        kind: 'pending'
-                    }} />
+                <div className='eskuel'>
+                    <div className='app-game-editor'>
+                        <EditorInstanceView instance={this.instance} status={{
+                            kind: 'pending'
+                        }} />
+                    </div>
                 </div>
             </React.StrictMode>
         );
@@ -106,8 +105,10 @@ export class MultiEditorComponent {
         const root = createRoot(div);
         root.render(
             <React.StrictMode>
-                <div className='eskuel app-game-editor'>
-                    <MultiEditorComponentView initialInstances={this.instances} fileSources={this.fileSources} />
+                <div className='eskuel'>
+                    <div className='app-game-editor'>
+                        <MultiEditorComponentView initialInstances={this.instances} fileSources={this.fileSources} />
+                    </div>
                 </div>
             </React.StrictMode>
         );

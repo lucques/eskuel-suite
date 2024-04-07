@@ -41,6 +41,35 @@ export type FileSource =
 
 export type NamedFileSource = FileSource & { name: string };
 
+export type FetchFail = { kind: 'fetch', url: string }
+
+// Materialize file source
+export function materializeFileSource(source: FileSource): Promise<Success<string> | Fail<FetchFail>> {
+    // Fetch
+    if (source.type === 'fetch') {
+        return fetch(source.url)
+            .then(response => {
+                // Success
+                if (response.ok) {
+                    return response.text().then((sql) => {
+                        return { ok: true, data: sql};
+                    });
+                }
+                // Fail
+                else {
+                    return { ok: false, error: { kind: 'fetch', url: source.url } };
+                }
+            });
+    }
+    // Inline
+    else {
+        return Promise.resolve({
+            ok: true,
+            data: source.content
+        });
+    }
+}
+
 
 export function getFilenameWithoutExtension(path: string): string {
     // Extract the filename from the path

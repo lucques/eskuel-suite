@@ -1,10 +1,8 @@
 const path = require('path');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 module.exports = {
-  mode: 'development',
-  // mode: 'production',
   entry: {
     "eskuel-suite": './src/index.ts'
   },
@@ -29,6 +27,10 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader']
       },
+      {
+				test: /\.ttf$/,
+				type: 'asset/resource'
+			}
     ],
   },
   plugins: [
@@ -44,7 +46,9 @@ module.exports = {
       template: './public/game-editor.html',
       filename: 'game-editor.html',
     }),
-    // new BundleAnalyzerPlugin()
+    new MonacoWebpackPlugin({
+      languages: ['sql']
+    })
   ],
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx'],
@@ -57,13 +61,11 @@ module.exports = {
       root: 'initSqlJs',
     },
   },
-  // Deactivated as to only have a single js f
-  //
-  // optimization: {
-  //   splitChunks: {
-  //     chunks: 'all',
-  //   }
-  // },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+    }
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
@@ -79,5 +81,5 @@ module.exports = {
     hot: true,
   },
   devtool: 'source-map',
-  cache: false
+  // cache: false
 };

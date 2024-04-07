@@ -13,20 +13,14 @@
 </head>
 <body>
     <script>
-        // document.addEventListener('DOMContentLoaded', function () {       
-        //     const g = new eskuelSuite.GameComponent('game', 'res/games/island-dev/island-dev.xml', 0);
-        //     g.init();
-        // });
-
         document.addEventListener('DOMContentLoaded', function () {       
-            const g = new eskuelSuite.GameConsoleComponent('console', './res/games/baufirma/baufirma.xml');
+            const g = new eskuelSuite.GameConsoleComponent('console');
             
             g.addUrl('./res/games/baufirma/baufirma.xml');
-            g.addUrl('./res/games/ozean/ozean.xml');
             g.addUrl('./res/games/jack-frost/jack-frost.xml');
+            g.addUrl('./res/games/ozean/ozean.xml');
             g.addUrl('./res/games/island/island.xml');
             g.addUrl('./res/games/sql-jungle/sql-jungle.xml');
-            // g.addUrl('./res/games/island-dev/island-dev.xml');
 
             g.init();
         });

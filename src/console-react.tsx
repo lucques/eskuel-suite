@@ -23,9 +23,6 @@ import 'react-resizable/css/styles.css';
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 
-// react-syntax-highlighter
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-
 // Custom CSS
 import './screen.css';
 
@@ -35,7 +32,7 @@ import { Schema } from './schema';
 import { FileSource, NamedFileSource, assert } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
 import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene } from './game-pure';
-import { ClickableIcon, IconActionButton, IconLinkButton, OpenModal, ResultTableView, TableInfoView, Widget } from './react';
+import { ClickableIcon, IconActionButton, IconLinkButton, OpenFileModal, ResultTableView, Widget } from './react';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
 export { Game } from './game-pure';
@@ -45,8 +42,16 @@ export { Game } from './game-pure';
 // React components //
 //////////////////////
 
-export function GameConsoleView({fileSources, initialFileSource}: {fileSources: NamedFileSource[], initialFileSource: NamedFileSource | null}) {
-    const [instance, setInstance] = useState<GameInstance | null>(initialFileSource === null ? null : new GameInstance(initialFileSource));
+export function GameConsoleView({fileSources, initialFileSource = undefined, initiallySkipFirstScenes = undefined}: {fileSources: NamedFileSource[], initialFileSource?: NamedFileSource, initiallySkipFirstScenes?: number}) {
+    
+    const [instance, setInstance] = useState<GameInstance | null>(null);
+
+    useEffect(() => {
+        // Initialize console with game?
+        if (initialFileSource !== undefined) {
+            setInstance(new GameInstance(initialFileSource, initiallySkipFirstScenes));
+        }
+    }, []);
 
     const onSelectGame = (source: FileSource) => {
         setInstance(new GameInstance(source));
@@ -84,7 +89,7 @@ function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: NamedF
                         <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
-                <OpenModal title="Spiel laden" fileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelectGame} />
+                <OpenFileModal title="Spiel laden" fileUploadTitle='Spieldatei hochladen' fileIconType='file-xml' fileAccept='.xml' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelectGame} />
             </div>
         </>
     );

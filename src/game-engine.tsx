@@ -18,16 +18,12 @@ import initSqlJs from 'sql.js';
 // loader.config({ monaco });
 
 // react-grid-layout
-import GridLayout from "react-grid-layout";
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 // react-tabs
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
-
-// react-syntax-highlighter
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
 // Custom CSS
 import './screen.css';
@@ -51,10 +47,10 @@ export { Game } from './game-pure';
 export class GameConsoleComponent {
 
     private fileSources: NamedFileSource[] = [];
-    private initialFileSource: NamedFileSource | null = null;
+    private initialFileSource?: NamedFileSource;
 
-    constructor(readonly divId: string, url?: string) {
-        if (url !== undefined && url !== null) {
+    constructor(readonly divId: string, url?: string, readonly initiallySkipFirstScenes?: number) {
+        if (url !== undefined) {
             this.initialFileSource = { type: 'fetch', url, name: getFilenameWithoutExtension(url) };
         }
     }
@@ -72,8 +68,10 @@ export class GameConsoleComponent {
         const root = createRoot(div);
         root.render(
             <React.StrictMode>
-                <div className='eskuel app-game-console'>
-                    <GameConsoleView fileSources={this.fileSources} initialFileSource={this.initialFileSource} />
+                <div className='eskuel'>
+                    <div className='app-game-console'>
+                        <GameConsoleView fileSources={this.fileSources} initialFileSource={this.initialFileSource} initiallySkipFirstScenes={this.initiallySkipFirstScenes} />
+                    </div>
                 </div>
             </React.StrictMode>
         );
@@ -83,9 +81,8 @@ export class GameConsoleComponent {
 export class GameComponent {
     private instance: GameInstance;
 
-    constructor(readonly divId: string, url: string, skipFirstScenes: number) {
+    constructor(readonly divId: string, url: string) {
         this.instance = new GameInstance({ type: 'fetch', url });
-        this.instance.onSkipMultipleScenes(skipFirstScenes);
     }
 
     init() {

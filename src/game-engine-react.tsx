@@ -34,8 +34,8 @@ import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql
 import { Schema } from './schema';
 import { assert } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene } from './game-pure';
-import { ClickableIcon, ResultTableView, TableInfoView, Widget } from './react';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, SchemaStatus } from './game-pure';
+import { ClickableIcon, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
 
 export { Game } from './game-pure';
 
@@ -316,7 +316,7 @@ function SceneWidget({game, gameState, onNextScene}: {game: Game, gameState: Gam
     else {
         const scene = game.scenes[gameState.curSceneIndex];
         return (
-            <Widget className={'widget-scene'} bodyClassName={'widget-scene-body d-flex flex-column justify-content-between'} title={'Szene ' + (gameState.curSceneIndex+1) + ' / ' + game.scenes.length}>
+            <Widget className={'widget-scene'} title={'Szene ' + (gameState.curSceneIndex+1) + ' / ' + game.scenes.length}>
                 {
                     game.isFinished(gameState)
                     ?
@@ -354,17 +354,10 @@ function QueryWidget({game, s, onSubmit, onResetDbInCurScene, onShowHint}: {game
 
     return (
         <Widget className={'widget-query'} title="SQL-Abfrage">
-            <div className={'widget-query-editor'}>
-                <Form.Control
-                    as="textarea"
-                    rows={3}
-                    value={sqlValue}
-                    disabled={!game.isCurSceneUnsolvedTask(s)} 
-                    onChange={(e) => { setSqlValue(e.target.value); }} />
-            </div>
-            <div className='d-flex justify-content-between'>
+            <QueryEditor sql={sqlValue} setSql={setSqlValue} height={80} disabled={!game.isCurSceneUnsolvedTask(s)} />
+            <div className='d-flex justify-content-between col-gap-default'>
                 <Button variant="primary" disabled={!game.isCurSceneUnsolvedTask(s)} onClick={() => { onSubmit(); }}>Ausführen</Button>
-                <div className='widget-query-extra-buttons d-flex justify-content-between'>
+                <div className='d-flex justify-content-between col-gap-default'>
                     <OverlayTrigger
                         placement="left"
                         delay={{ show: 0, hide: 0 }}
@@ -379,12 +372,6 @@ function QueryWidget({game, s, onSubmit, onResetDbInCurScene, onShowHint}: {game
         </Widget>
     );
 }
-
-
-type SchemaStatusPending = { kind: 'pending' };
-type SchemaStatusLoaded  = { kind: 'loaded', data: Schema };
-type SchemaStatusFailed  = { kind: 'failed', error: ParseSchemaFail };
-type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | SchemaStatusFailed;
 
 function SchemaWidget({instance}: {instance: GameInstance}) {
     const [schemaStatus, setSchemaStatus] = useState<SchemaStatus>( { kind: 'pending' } );
@@ -409,28 +396,17 @@ function SchemaWidget({instance}: {instance: GameInstance}) {
     }, []);
 
     return (
-        <Widget className={'widget-schema'} bodyClassName='widget-schema-body' title={'Schema'}>
-            {schemaStatus.kind === 'pending' ? (
-                <p className='schema-status'>Lade...</p>
-            )
-            : schemaStatus.kind === 'failed' ? (
-                <p className='schema-status'>Fehler beim Einlesen des Schemas: {schemaStatus.error.details}</p>
-            ) : (
-                <>
-                <Table className="widget-schema-table">
-                    <tbody>
-                        {
-                            schemaStatus.data.map((tableInfo) =>
-                                <TableInfoView key={tableInfo.name} tableInfo={tableInfo} />
-                            )
-                        }
-                    </tbody>
-                </Table>
-                <div className="widget-schema-caption">
-                    <small><u>unterstrichen</u>: Primärschlüssel&nbsp;&nbsp;&nbsp; <em>kursiv</em>: Fremdschlüssel</small>
-                </div>
-                </>
-            )}
+        <Widget className={'widget-schema'} title={'Schema'}>
+            {
+                schemaStatus.kind === 'pending' ? (
+                    <p className='schema-status'>Lade...</p>
+                )
+                : schemaStatus.kind === 'failed' ? (
+                    <p className='schema-status'>Fehler beim Einlesen des Schemas: {schemaStatus.error.details}</p>
+                )
+                :
+                    <SchemaView schema={schemaStatus.data} />
+            }
         </Widget>
     );
 }
@@ -509,7 +485,7 @@ function GameResultMissSuccView({res, onClose}: {res: SqlResultSucc, onClose: ()
                     {res.sql}
                 </SyntaxHighlighter>
             </ListGroup.Item>
-            {res.result.map((r, i) => <ResultTableView key={i} result={r} className={'border-warning'} />)}
+            {res.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-warning bg-opacity-25 border-warning'} />)}
         </ListGroup>
     );
 }
@@ -535,7 +511,7 @@ function GameResultHintSelectView({expectedResult, onClose}: {expectedResult: Sq
         return (
             <ListGroup className="result-view">
                 <ResultViewHeader bsVariant="info" title={<em>Tipp: Erwartetes Ergebnis:</em>} onClose={onClose} />
-                {expectedResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'border-info'} />)}
+                {expectedResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-info bg-opacity-25 border-info'} />)}
             </ListGroup>
         );
     }
@@ -561,7 +537,7 @@ function GameResultHintManipulateView({checkResult, onClose}: {checkResult: SqlR
                         Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter> das folgende Ergebnis liefert:
                     </p>
                 </ListGroup.Item>
-                {checkResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'border-info'} />)}
+                {checkResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-info bg-opacity-25 border-info'} />)}
             </ListGroup>
         );
     }

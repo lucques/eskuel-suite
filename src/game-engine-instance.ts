@@ -31,25 +31,30 @@ export type StatusActive     = { kind: 'active'  } // Fields have been requested
 export type StatusFailed     = { kind: 'failed', error: XMLFail | RunInitScriptFail } // Fields have been requested to activate and failed to do so
 export type Status = StatusPending | StatusActive | StatusFailed
 
+type InternalState = {
+    userDb:    StaticDb,
+    refDb:     StaticDb,
+    gameState: GameState,
+    // Cache for solutions
+    curReferenceSolutionResults: SqlResult | null,
+    curReferenceCheckResults:    SqlResult | null
+}
+
 export class GameInstance {
 
     readonly id: string;
     
     private game:        Promise<Success<Game>      | Fail<XMLFail>>;
-    private userDb:      Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>;
-    private refDb: Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>;
+
+    // Internal state
+    private internalState: Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>>;
     
     private status: Status = { kind: 'pending' };
     
     // Not part of `status`.
-    private gameState:   Promise<Success<GameState> | Fail<XMLFail>>;
     private schema:      Promise<Success<Schema>    | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>;
 
-    // Cache for solutions
-    private curReferenceSolutionResults: Promise<SqlResult> | null = null;
-    private curReferenceCheckResults:    Promise<SqlResult> | null = null;
-
-    constructor(gameSource: FileSource) {
+    constructor(gameSource: FileSource, initiallySkipFirstScenes?: number) {
         this.id = 'game-instance-' + generateId();
 
         // `game`: Init; thereby track status
@@ -90,19 +95,39 @@ export class GameInstance {
         // `userDb`:    Init; thereby track status
         // `refDb`:     Init; thereby track status
         // `gameState`: Init
-        const initValues = this.createFreshInternalState();
-        this.userDb    = initValues.userDb.then(res => this.updateStatusAfterDbInit(res)); // Track status
-        this.refDb     = initValues.refDb.then(res =>  this.updateStatusAfterDbInit(res)); // Track status
-        this.gameState = initValues.gameState;
+        this.internalState = this.createFreshInternalState();
+
+        // Skip?
+        if (initiallySkipFirstScenes !== undefined) {
+            this.internalState = this.internalState.then(
+                (internalStateRes: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> => {
+                    if (!internalStateRes.ok) {
+                        return Promise.resolve({ ok: false, error: internalStateRes.error });
+                    }
+
+                    return this.game.then(
+                        (gameRes: Success<Game>| Fail<XMLFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> => {
+                            if (!gameRes.ok) {
+                                return Promise.resolve({ ok: false, error: gameRes.error });
+                            }
+        
+                            return this.onSkipMultipleScenesPure(gameRes.data, initiallySkipFirstScenes, internalStateRes);
+                        });
+                });
+        }
+
+        // Update status
+        this.internalState = this.internalState.then(res => this.updateStatusAfterInternalStateInit(res)); // Track status
+
 
         // `schema`:    Init
-        this.schema = this.refDb
-            .then(db => {
-                if (!db.ok) {
-                    return Promise.resolve({ ok: false, error: db.error });
+        this.schema = this.internalState
+            .then(internalStateRes => {
+                if (!internalStateRes.ok) {
+                    return Promise.resolve({ ok: false, error: internalStateRes.error });
                 }
 
-                return db.data.querySchema().then(schema => {
+                return internalStateRes.data.refDb.querySchema().then(schema => {
                     if (schema.ok) {
                         return { ok: true, data: schema.data };
                     }
@@ -130,22 +155,13 @@ export class GameInstance {
      * The effect of this operation is though that the status is "active" or "failed"
      */
     async resolve(): Promise<Success<void> | Fail<XMLFail | RunInitScriptFail>> {
-        return this.userDb.then(
+        return this.internalState.then(
             res => {
                 if (!res.ok) {
                     return res;
                 }
                 else {
-                    return this.refDb.then(
-                        res => {
-                            if (!res.ok) {
-                                return res;
-                            }
-                            else {
-                                return { ok: true, data: undefined };
-                            }
-                        }
-                    );
+                    return { ok: true, data: undefined };
                 }
             }
         );
@@ -155,8 +171,14 @@ export class GameInstance {
         return this.game;
     }
 
-    async getGameState(): Promise<Success<GameState> | Fail<XMLFail>> {
-        return this.gameState;
+    async getGameState(): Promise<Success<GameState> | Fail<XMLFail | RunInitScriptFail>> {
+        const internalStateRes = await this.internalState;
+
+        if (!internalStateRes.ok) {
+            return { ok: false, error: internalStateRes.error };
+        }
+
+        return { ok: true, data: internalStateRes.data.gameState };
     }
 
     async getSchema(): Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>> {
@@ -180,28 +202,27 @@ export class GameInstance {
 
     async onNextScene(): Promise<void> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        assert(stateRes.ok && gameRes.ok, 'Illegal state');
+        const internalState = await this.internalState;
+        assert(gameRes.ok && internalState.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
+        const gameState = internalState.data.gameState;
 
-        assert(!game.isCurSceneUnsolvedTask(state), 'Current scene is unsolved task');
+        assert(!game.isCurSceneUnsolvedTask(gameState), 'Current scene is unsolved task');
         // Advance to next scene
         await this.advanceScene();
     }
 
     async onSubmitQuery(sql: string): Promise<GameResultCorrect | GameResultMiss> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        const userDbRes = await this.userDb;
-        assert(stateRes.ok && gameRes.ok && userDbRes.ok, 'Illegal state');
+        const internalState = await this.internalState;
+        assert(gameRes.ok && internalState.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
-        const userDb = userDbRes.data;
+        const gameState = internalState.data.gameState;
+        const userDb = internalState.data.userDb;
 
-        const curScene = game.getCurScene(state);
+        const curScene = game.getCurScene(gameState);
         assert(curScene.type === 'select' || curScene.type === 'manipulate', 'Cannot submit query for current scene\'s type');
-        assert(game.isCurSceneUnsolvedTask(state), 'Cannot submit query when there is nothing to solve')
+        assert(game.isCurSceneUnsolvedTask(gameState), 'Cannot submit query when there is nothing to solve')
 
         // Query `userDb`
         const userResultsRes = await userDb.exec(sql);
@@ -238,7 +259,7 @@ export class GameInstance {
                 // Check each table
                 let correct = true;
                 for (let i = 0; i < userTables.length; i++) {
-                    correct = correct && areResultsEqual(userTables[i], refTables[i], curScene.isOrderRelevant);
+                    correct = correct && areResultsEqual(userTables[i], refTables[i], curScene.isRowOrderRelevant, curScene.isColOrderRelevant, curScene.areColNamesRelevant);
                 }
 
                 // Case 2.2: Not all tables match
@@ -297,7 +318,7 @@ export class GameInstance {
                 // Check each table
                 let correct = true;
                 for (let i = 0; i < userCheckTables.length; i++) {
-                    correct = correct && areResultsEqual(userCheckTables[i], refCheckTables[i], false);
+                    correct = correct && areResultsEqual(userCheckTables[i], refCheckTables[i], false, true, true);
                 }
 
                 // Case 2.2: Not all tables match
@@ -327,27 +348,27 @@ export class GameInstance {
 
     async onResetDbInCurScene(): Promise<void> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        assert(stateRes.ok && gameRes.ok, 'Illegal state');
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
+        const gameState = internalStateRes.data.gameState;
 
-        assert(game.isCurSceneUnsolvedTask(state), 'There should be no need to reset the user db when there is nothing to solve');
+        assert(game.isCurSceneUnsolvedTask(gameState), 'There should be no need to reset the user db when there is nothing to solve');
         // Reset
-        await this.resetToScene(state.curSceneIndex);
+        await this.resetToScene(gameState.curSceneIndex);
     }
 
     async onShowHint(): Promise<GameResult> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        assert(stateRes.ok && gameRes.ok, 'Illegal state');
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
+        const gameState = internalStateRes.data.gameState;
 
-        assert(game.isCurSceneUnsolvedTask(state), 'Current scene is not an unsolved task');
+        assert(game.isCurSceneUnsolvedTask(gameState), 'Current scene is not an unsolved task');
 
         // 'select' scene
-        if (game.getCurScene(state).type === 'select') {
+        if (game.getCurScene(gameState).type === 'select') {
             // Query `referenceDb`
             const refResults = await this.getReferenceSolutionResults();
     
@@ -367,10 +388,11 @@ export class GameInstance {
     // User actions, privileged //
     //////////////////////////////
 
+    // TODO: Not used
     async onNextSceneEvenIfUnsolved(): Promise<void> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        assert(gameRes.ok && stateRes.ok, 'Illegal state');
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
 
         // Advance to next scene
         await this.advanceScene();
@@ -380,6 +402,18 @@ export class GameInstance {
         for (let i = 0; i < n; i++) {
             await this.onNextSceneEvenIfUnsolved();
         }
+    }
+
+    async onSkipMultipleScenesPure(game: Game, n: number, internalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+        assert(internalState.ok, 'Illegal state');
+
+        let curInternalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail> = internalState;
+
+        for (let i = 0; i < n; i++) {
+            curInternalState = await this.advanceScenePure(game, curInternalState);
+        }
+
+        return curInternalState;
     }
 
 
@@ -409,7 +443,7 @@ export class GameInstance {
         return gameRes;
     }
 
-    private async updateStatusAfterDbInit<T>(res: Success<T> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<T> | Fail<XMLFail | RunInitScriptFail>> {
+    private async updateStatusAfterInternalStateInit<T>(res: Success<T> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<T> | Fail<XMLFail | RunInitScriptFail>> {
         // "pending" --db_ok--> "active"
         // "active"  --db_ok--> "active"
         if ((this.status.kind === 'pending' || this.status.kind === 'active') && res.ok) {
@@ -435,131 +469,152 @@ export class GameInstance {
     // We assert here that the game is in status "active"
 
     private async getReferenceSolutionResults(): Promise<SqlResult> {
-        if (this.curReferenceSolutionResults === null) {
-            const gameRes  = await this.game;
-            const stateRes = await this.gameState;
-            const refDbRes = await this.refDb;
-            assert(stateRes.ok && gameRes.ok && refDbRes.ok, 'Illegal state');
-            const game  = gameRes.data;
-            const state = stateRes.data;
-            const refDb = refDbRes.data;
+        const gameRes  = await this.game;
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
+        const game  = gameRes.data;
+        const internalState = internalStateRes.data;
 
-            const curScene = game.getCurScene(state);
+        if (internalState.curReferenceSolutionResults === null) {
+            const curScene = game.getCurScene(internalState.gameState);
 
             // Assertions
             assert(curScene.type === 'select');
 
             // Query `referenceDb`
-            const resultsRes = await refDb.exec(curScene.sqlSol);
+            const resultsRes = await internalState.refDb.exec(curScene.sqlSol);
 
             // Assertions
             assert(resultsRes.ok);
 
-            this.curReferenceSolutionResults = Promise.resolve(resultsRes.data);
+            // Update cache
+            internalState.curReferenceSolutionResults = resultsRes.data;
+            this.internalState = Promise.resolve({ok: true, data: internalState});
         };
 
         // Update the timestamp. This is to make each `SqlResult` appear as uniquely requested.
         // Uniqueness is used to differentiate by `key` in React maps.
-        return this.curReferenceSolutionResults.then(res => {
-            if (res.type === 'succ') {
-                return {
-                    type: 'succ',
-                    timestamp: new Date(),
-                    sql: res.sql,
-                    result: res.result
-                };
-            }
-            else {
-                return {
-                    type: 'error',
-                    timestamp: new Date(),
-                    sql: res.sql,
-                    message: res.message
-                };
-            }
-        });
+        return {
+            ...internalState.curReferenceSolutionResults,
+            timestamp: new Date(),
+        };
     }
 
     private async getReferenceCheckResults(): Promise<SqlResult> {
-        if (this.curReferenceCheckResults === null) {
-            const gameRes  = await this.game;
-            const stateRes = await this.gameState;
-            const refDbRes = await this.refDb;
-            assert(stateRes.ok && gameRes.ok && refDbRes.ok, 'Illegal state');
-            const game  = gameRes.data;
-            const state = stateRes.data;
-            const refDb = refDbRes.data;
+        const gameRes  = await this.game;
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
+        const game  = gameRes.data;
+        const internalState = internalStateRes.data;
 
-            const curScene = game.getCurScene(state);
+        if (internalState.curReferenceCheckResults === null) {
+
+            const curScene = game.getCurScene(internalState.gameState);
 
             // Assertions
             assert(curScene.type === 'manipulate');
 
             // Query `referenceDb`: Check.
-            const checkRes = await refDb.exec(curScene.sqlCheck);
+            const checkRes = await internalState.refDb.exec(curScene.sqlCheck);
 
             // Assertions
             assert(checkRes.ok);
 
-            this.curReferenceCheckResults = Promise.resolve(checkRes.data);
-        };
+            // Update cache
+            internalState.curReferenceCheckResults = checkRes.data;
+            this.internalState = Promise.resolve({ok: true, data: internalState});
+        }
 
         // Update the timestamp. This is to make each `SqlResult` appear as uniquely requested.
         // Uniqueness is used to differentiate by `key` in React maps.
-        return this.curReferenceCheckResults.then(res => {
-            if (res.type === 'succ') {
-                return {
-                    type: 'succ',
-                    timestamp: new Date(),
-                    sql: res.sql,
-                    result: res.result
-                };
-            }
-            else {
-                return {
-                    type: 'error',
-                    timestamp: new Date(),
-                    sql: res.sql,
-                    message: res.message
-                };
-            }
-        });
+        return {
+            ...internalState.curReferenceCheckResults,
+            timestamp: new Date(),
+        };
     }
 
+    // TODO: Work in progress. Reorganize how the game state is manipulated.
     private async advanceScene(): Promise<void> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        const refDbRes = await this.refDb;
-        assert(stateRes.ok && gameRes.ok && refDbRes.ok, 'Illegal state');
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
-        const refDb = refDbRes.data;
+        const internalState = internalStateRes.data;
 
-        // Manipulate game state
-        const newState = game.advanceScene(state);
-        this.gameState = Promise.resolve({ok: true, data: newState});
+        const curScene = game.getCurScene(internalState.gameState);
+
+        // Only if not solved by user: Manipulate also `userDb`
+        if (curScene.type == 'manipulate' && game.isCurSceneUnsolvedTask(internalState.gameState)) {
+            await internalState.userDb.exec(curScene.sqlSol);
+        }
         
-        // Clear cache
-        this.curReferenceSolutionResults = null;
-        this.curReferenceCheckResults = null;
+        // Compute new game state
+        const newState = game.advanceScene(internalState.gameState);
+
+        /////////////////////////////////
+        // Update game state and cache //
+        /////////////////////////////////
+
+        internalState.gameState = newState;
+        internalState.curReferenceSolutionResults = null;
+        internalState.curReferenceCheckResults = null;
+
+        // If "manipulate" scene: Manipulate ref db
+        const newScene = game.getCurScene(newState);
+        if (newScene.type === 'manipulate') {
+            // Manipulate `refDb`: Results don't matter, even an error is permitted.
+            await internalState.refDb.exec(newScene.sqlSol);
+        }
+
+        // Update
+        this.internalState = Promise.resolve({ok: true, data: internalState});
+    }
+
+    private async advanceScenePure(game: Game, internalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+        assert(internalState.ok, 'Illegal state');
+        let curState = internalState.data.gameState;
+
+        const currScene = game.getCurScene(curState);
+
+        // Only if not solved by user: Manipulate also `userDb`
+        if (currScene.type == 'manipulate' && game.isCurSceneUnsolvedTask(curState)) {
+            await internalState.data.userDb.exec(currScene.sqlSol);
+        }
+
+        // Compute new game state
+        const newState = game.advanceScene(curState);
+
+        
+        /////////////////////////////////
+        // Update game state and cache //
+        /////////////////////////////////
+
+        internalState.data.gameState = newState;
+        internalState.data.curReferenceSolutionResults = null;
+        internalState.data.curReferenceCheckResults = null;
 
         // If "manipulate" scene: Manipulate ref db
         const curScene = game.getCurScene(newState);
         if (curScene.type === 'manipulate') {
-            // Manipulate `referenceDb`: Results don't matter, even an error is permitted.
-            await refDb.exec(curScene.sqlSol);
+            // Manipulate `refDb`: Results don't matter, even an error is permitted.
+            await internalState.data.refDb.exec(curScene.sqlSol);
         }
+
+        return internalState;
     }
 
     private async markSceneSolved(): Promise<void> {
         const gameRes  = await this.game;
-        const stateRes = await this.gameState;
-        assert(stateRes.ok && gameRes.ok, 'Illegal state');
+        const internalStateRes = await this.internalState;
+        assert(gameRes.ok && internalStateRes.ok, 'Illegal state');
         const game  = gameRes.data;
-        const state = stateRes.data;
+        const internalState = internalStateRes.data;
 
         // Manipulate game state
-        this.gameState = Promise.resolve({ok: true, data: game.markSolved(state)});
+        internalState.gameState = game.markSolved(internalState.gameState);
+
+        // Update game state
+        this.internalState = Promise.resolve({ok: true, data: internalState});
     }
 
     private async resetToScene(n: number) {
@@ -572,91 +627,31 @@ export class GameInstance {
 
     // The following functions `resetInternalState` and `createFreshInternalState` are only split because `resetInternalState` cannot be used in constructor (limitation of TS's type system).
     private resetInternalState() {
-        const initValues = this.createFreshInternalState();
-        this.userDb    = initValues.userDb;
-        this.refDb     = initValues.refDb;
-        this.gameState = initValues.gameState;
+        this.internalState = this.createFreshInternalState();
+
     }
 
-    private createFreshInternalState(): { userDb:    Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>,
-                                          refDb:     Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>,
-                                          gameState: Promise<Success<GameState> | Fail<XMLFail>> } {
-        // Reset db's
+    private async createFreshInternalState(): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+        const gameRes = await this.game;
 
-        // `userDb`
-        const userDb = this.game
-            .then((gameRes: Success<Game> | Fail<XMLFail | RunInitScriptFail>): Success<StaticDb> | Fail<XMLFail | RunInitScriptFail> => {
-                if (gameRes.ok) {
-                    return { ok: true, data: new StaticDb({ type: 'inline', content: gameRes.data.initialSqlScript }) };
-                }
-                else {
-                    return gameRes;
-                }
-            })
-            .then((dbRes: Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> => {
-                if (!dbRes.ok) {
-                    return Promise.resolve(dbRes)
-                }
-                else {
-                    const res: Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> =
-                        dbRes.data.resolve().then(
-                            ()      => { return Promise.resolve(dbRes); },
-                            (error: RunInitScriptFail | FetchInitScriptFail) => {
-                                const e: RunInitScriptFail | FetchInitScriptFail = error;
+        if (!gameRes.ok) {
+            return Promise.resolve({ ok: false, error: gameRes.error });
+        }
 
-                                // Assertion holds because there is no SQL file to fetch
-                                assert(error.kind !== 'fetch-init-script');
-                                return { ok: false, error: error };
-                            }
-                        );
+        const game = gameRes.data;
 
-                    return res;
-                }
-            });
+        const userDb = new StaticDb(gameRes.data.initialSqlScript);
+        const refDb = new StaticDb(gameRes.data.initialSqlScript);
 
-        // `referenceDb`
-        const refDb = this.game
-            .then((gameRes: Success<Game> | Fail<XMLFail | RunInitScriptFail>): Success<StaticDb> | Fail<XMLFail | RunInitScriptFail> => {
-                if (gameRes.ok) {
-                    return { ok: true, data: new StaticDb({ type: 'inline', content: gameRes.data.initialSqlScript }) };
-                }
-                else {
-                    return gameRes;
-                }
-            })
-            .then((dbRes: Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> => {
-                if (!dbRes.ok) {
-                    return Promise.resolve(dbRes)
-                }
-                else {
-                    const res: Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> =
-                        dbRes.data.resolve().then(
-                            ()      => { return Promise.resolve(dbRes); },
-                            (error: RunInitScriptFail | FetchInitScriptFail) => {
-                                // Assertion holds because there is no SQL file to fetch
-                                assert(error.kind !== 'fetch-init-script');
-                                return { ok: false, error: error };
-                            }
-                        );
-
-                    return res;
-                }
-            })
-            .then(res => this.updateStatusAfterDbInit(res)); // Track status
-        
-        // Reset game state
-
-        // Not part of the status, therefore nothing to track here.
-        const gameState = this.game
-        .then((gameRes): Success<GameState> | Fail<XMLFail> => {
-            if (gameRes.ok) {
-                return { ok: true, data: gameRes.data.freshState() }
-            }
-            else {
-                return gameRes;
+        return Promise.resolve({
+            ok: true,
+            data: {
+                userDb: userDb,
+                refDb: refDb,
+                gameState: game.freshState(),
+                curReferenceSolutionResults: null,
+                curReferenceCheckResults: null
             }
         });
-
-        return { userDb, refDb, gameState };
     }
 }

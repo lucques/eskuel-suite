@@ -1,6 +1,6 @@
 import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, ParseXMLFail, Scene, FetchXMLFail } from './game-pure';
 import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, FileSource, Success, assert, generateId } from './util';
+import { Fail, FetchFail, FileSource, Success, assert, generateId, materializeFileSource } from './util';
 import { Schema } from './schema';
 
 
@@ -31,8 +31,8 @@ export class EditorInstance {
 
     private name:   string;
 
-    private game:        Promise<Success<Game>      | Fail<XMLFail>>;
-    private db:          Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>;
+    private game:   Promise<Success<Game>      | Fail<XMLFail>>;
+    private db:     Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>;
     
     private status: Status = { kind: 'pending' };
     
@@ -149,17 +149,26 @@ export class EditorInstance {
         // No need to update database
     }
 
-    async onCommitInitialSqlScript(sql: string): Promise<void> {
+    async onCommitInitialSqlScript(dbSource: FileSource): Promise<void> {
         const gameRes = await this.game;
         assert(gameRes.ok, 'Illegal state');
         const game  = gameRes.data;
 
-        // Update game
-        const newGame = new Game(game.title, game.teaser, game.copyright, sql, game.scenes);
-        this.game = Promise.resolve({ok: true, data: newGame});
+        // Materialize initial SQL script
+        return materializeFileSource(dbSource).then((sqlRes: Success<string> | Fail<FetchFail>) => {
+            if (sqlRes.ok) {
+                // Update game
+                const newGame = new Game(game.title, game.teaser, game.copyright, sqlRes.data, game.scenes);
+                this.game = Promise.resolve({ok: true, data: newGame});
 
-        // Update database
-        this.resetDbAndSchema();
+                // Update database
+                Promise.resolve(this.resetDbAndSchema());
+            }
+            else {
+                // Update game
+                this.game = Promise.resolve({ok: false, error: { kind: 'fetch-xml', url: sqlRes.error.url }});
+            }
+        });
     }
 
     async onCommitScene(index: number, scene: Scene) {
@@ -271,7 +280,7 @@ export class EditorInstance {
         const db = this.game
             .then((gameRes: Success<Game> | Fail<XMLFail | RunInitScriptFail>): Success<StaticDb> | Fail<XMLFail | RunInitScriptFail> => {
                 if (gameRes.ok) {
-                    return { ok: true, data: new StaticDb({ type: 'inline', content: gameRes.data.initialSqlScript }) };
+                    return { ok: true, data: new StaticDb(gameRes.data.initialSqlScript) };
                 }
                 else {
                     return gameRes;
