@@ -37,8 +37,6 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
     // Parsing infrastructure //
     ////////////////////////////
 
-console.log(createTableStatement);
-
     // Tag function for template literals that is used to produce regexes
     let r = String.raw;
 
@@ -133,7 +131,6 @@ console.log(createTableStatement);
         else {
             const match = tableChunkTrimmed.match(colRegexp);
             if (match === null || match.length !== 3) {
-                console.log(match);
                 return { ok: false, error: { kind: 'extraction', details: 'Could not parse column definition: `' + tableChunkTrimmed + '`'} };
             }
             const name = parseId(match[1]);
