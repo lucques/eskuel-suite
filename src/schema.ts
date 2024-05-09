@@ -33,14 +33,53 @@ type InternalTableFail = { kind: 'internal-table' }
 type ExtractionFail    = { kind: 'extraction', details: string }
 
 export function extractTableInfo(createTableStatement: string): Success<TableInfo> | Fail<InternalTableFail | ExtractionFail> {
+    ////////////////////////////
+    // Parsing infrastructure //
+    ////////////////////////////
+
+console.log(createTableStatement);
+
+    // Tag function for template literals that is used to produce regexes
+    let r = String.raw;
+
+    // Use `idRegex` to capture an identifier (e.g. table name, col name, etc.)
+    const idRegexp = r`(` +
+                       r`[\p{L}_]+` + r`|` + // single word
+                       r`"[^"]+"`   + r`|` + // any word sequence enclosed by "
+                       r`'[^']+'`   + r`|` + // any word sequence enclosed by '
+                        '`[^`]+`'          + // any word sequence enclosed by `
+                     r`)`;
+    
+    function parseId(match: string): string {
+        if (match.startsWith('"') || match.startsWith('\'') || match.startsWith('`')) {
+            return match.slice(1, -1);
+        }
+        return match;
+    }
+
     // Use `[\s\S]` to match *any* character (`.` does not match `\n`)
-    const matches = createTableStatement.match(/CREATE TABLE\s*\"?([\w]+)\"?\s*\(([\s\S]*)\)/);
+
+    // Groups: 1. table name, 2. column definitions
+    const createTableStatementRegexp = new RegExp(r`CREATE TABLE\s+` + idRegexp + r`\s*\(([\s\S]*)\)`, 'u');
+    // Groups: 1. column names
+    const primaryKeyRegexp           = new RegExp(r`PRIMARY KEY\s*\(([^)]+)\)`);
+    // Groups: 1. column name, 2. foreign table, 3. foreign column
+    const foreignKeyRegexp           = new RegExp(r`FOREIGN KEY\s*\(([^)]+)\)\s*REFERENCES\s*` + idRegexp + r`\s*\(([^)]+)\)`, 'u');
+    // Groups: 1. column name, 2. rest
+    const colRegexp                  = new RegExp(idRegexp + r`\s*([\s\S]*)`, 'u');
+
+
+    ///////////
+    // Do it //
+    ///////////
+
+    const matches = createTableStatement.match(createTableStatementRegexp);
 
     if (matches === null || matches.length !== 3) {
         return { ok: false, error: { kind: 'extraction', details: 'Could not parse SQL CREATE TABLE statement.' } };
     }
 
-    const name  = matches[1];
+    const name  = parseId(matches[1]);
 
     // Ignore internal SQLite tables
     if (name === 'sqlite_sequence') {
@@ -63,40 +102,47 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
     {
         const tableChunkTrimmed = tableChunk.trim();
 
-        // Determine which of the following three cases we have
+        // Determine which of the following three cases we have.
         // 1. Explicit primary key?
         if (tableChunkTrimmed.startsWith('PRIMARY KEY')) {
-            const matches = tableChunkTrimmed.match(/PRIMARY KEY\s*\((\"?[\w]+\"?)(?:\s*,\s*([\w]+))?\)/);
-            if (matches === null) {
-                return { ok: false, error: { kind: 'extraction', details: 'Could not parse PRIMARY KEY statement'} };
+            const match = tableChunkTrimmed.match(primaryKeyRegexp);
+            if (match === null) {
+                return { ok: false, error: { kind: 'extraction', details: 'Could not parse PRIMARY KEY statement: `' + tableChunkTrimmed + '`'} };
             }
 
-            matches.shift(); // Remove first match (whole string)
-            for (const primarykeyChunk of matches) {
-                primaryKey.push(primarykeyChunk);
+            const names = match[1].split(',').map(name => parseId(name.trim()));
+
+            for (const name of names) {
+                primaryKey.push(name);
             }
         }
         // 2. Explicit foreign key?
         else if (tableChunkTrimmed.startsWith('FOREIGN KEY')) {
-            const matches = tableChunkTrimmed.match(/FOREIGN KEY\s*\(([\w]+)\)\s*REFERENCES\s*(\w+)\s*\(\s*([\w]+)\s*\)/);
-            if (matches === null || matches.length !== 4) {
-                return { ok: false, error: { kind: 'extraction', details: 'Could not parse FOREIGN KEY statement'} };
+            const match = tableChunkTrimmed.match(foreignKeyRegexp);
+            if (match === null || match.length !== 4) {
+                return { ok: false, error: { kind: 'extraction', details: 'Could not parse FOREIGN KEY statement + `' + tableChunkTrimmed + '`'} };
             }
 
-            const col = matches[1];
+            const col = parseId(match[1]);
             if (foreignKeys[col] === undefined) {
                 foreignKeys[col] = [];
             }
-            foreignKeys[col].push(new ForeignKeyPart(matches[2], matches[3]));
+            foreignKeys[col].push(new ForeignKeyPart(parseId(match[2]), parseId(match[3])));
         }
         // 3. Ordinary col?
         else {
-            const [name, ...remainingChunks] = tableChunkTrimmed.split(/\s+/);
-            const remainingChunksJoined = remainingChunks.join(' ').trim();
+            const match = tableChunkTrimmed.match(colRegexp);
+            if (match === null || match.length !== 3) {
+                console.log(match);
+                return { ok: false, error: { kind: 'extraction', details: 'Could not parse column definition: `' + tableChunkTrimmed + '`'} };
+            }
+            const name = parseId(match[1]);
+            const rest = match[2].trim();
+            const remainingChunks = rest.split(/\s+/).join(' ').trim();
 
-            if (remainingChunksJoined.includes('PRIMARY KEY')) {
+            if (remainingChunks.includes('PRIMARY KEY')) {
                 // Remove `PRIMARY KEY` string
-                const type = remainingChunksJoined.split('PRIMARY KEY').join('').trim();
+                const type = remainingChunks.split('PRIMARY KEY').join('').trim();
 
                 cols.push({
                     name,
@@ -108,7 +154,7 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
             else {
                 cols.push({
                     name,
-                    type: remainingChunksJoined
+                    type: remainingChunks
                 });
             }
         }
