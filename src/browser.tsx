@@ -6,7 +6,8 @@ import React from 'react';
 import { BrowserInstance } from './browser-instance';
 import { MultiBrowserComponentView } from './browser-react';
 
-import { NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
+import { assert, getFilenameExtension, getFilenameWithoutExtension, Named } from "./util";
+import { DbSource, makeNamedDbSource } from './sql-js-api';
 
 
 ////////////////////////////
@@ -18,26 +19,21 @@ import { NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
  */
 export class MultiBrowserComponent {
 
-    private fileSources: NamedFileSource[] = [];
+    private fileSources: Named<DbSource>[] = [];
     private instances: BrowserInstance[] = [];
 
     constructor(readonly divId: string) { }
 
     addUrl(url: string) {
-        const name = getFilenameWithoutExtension(url);
-
-        this.fileSources.push({ type: 'fetch', url, name });
+        this.fileSources.push(makeNamedDbSource(url));
     }
 
     addAndOpenUrl(url: string) {
-        const name = getFilenameWithoutExtension(url);
-        const db = new BrowserInstance(name, {
-            type: 'fetch',
-            url: url
-        });
+        const namedDbSource = makeNamedDbSource(url);
+        const newInstance = new BrowserInstance(namedDbSource.name, namedDbSource);
 
-        this.fileSources.push({ type: 'fetch', url, name });
-        this.instances.push(db);
+        this.fileSources.push(namedDbSource);
+        this.instances.push(newInstance);
     }
 
     init() {

@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import { Fail, Success, assert, isFail, isSuccess } from './util';
-import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
+import { Fail, RawSource, Success, assert, decodeFromBase64, encodeToBase64, isFail, isSuccess } from './util';
+import { DbData, FetchDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
 import { Schema } from './schema';
 
 import * as he from 'he';
@@ -8,6 +8,15 @@ const heOptions = {
     // useNamedReferences: true,
     // allowUnsafeSymbols: false
 };
+
+
+/////////////////////////////////
+// Interface for loading games //
+/////////////////////////////////
+
+export type GameSource = { type: 'object', source: Game } |
+                         { type: 'xml',    source: RawSource<string> }
+
 
 //////////////////////////////////
 // Failures during game loading //
@@ -29,7 +38,7 @@ export type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | Sch
 
 export type GameDatabaseStatusPending = { kind: 'pending' };
 export type GameDatabaseStatusLoaded  = { kind: 'loaded', data: Schema };
-export type GameDatabaseStatusFailed  = { kind: 'failed', error: FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail };
+export type GameDatabaseStatusFailed  = { kind: 'failed', error: FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail };
 export type GameDatabaseStatus = GameDatabaseStatusPending | GameDatabaseStatusLoaded | GameDatabaseStatusFailed;
 
 
@@ -42,7 +51,7 @@ export class Game {
         readonly title: string,
         readonly teaser: string,
         readonly copyright: string,
-        readonly initialSqlScript: string,
+        readonly dbData: DbData,
         readonly scenes: Scene[])
     {
         assert(scenes.length > 0, 'There must be at least one scene');
@@ -51,7 +60,8 @@ export class Game {
     freshState(): GameState {
         return {
             curSceneIndex:  0,
-            curSceneSolved: this.scenes[0].type === 'text' ? null : false
+            // TODO: simplify
+            curSceneSolved: this.scenes[0].type === 'text' || this.scenes[0].type === 'image' ? null : false
         };
     }
 
@@ -65,7 +75,8 @@ export class Game {
 
         return {
             curSceneIndex:  s.curSceneIndex+1,
-            curSceneSolved: this.scenes[s.curSceneIndex+1].type === 'text' ? null : false
+            // TODO: simplify
+            curSceneSolved: this.scenes[s.curSceneIndex+1].type === 'text' || this.scenes[s.curSceneIndex+1].type === 'image' ? null : false
         };
     }
 
@@ -102,6 +113,10 @@ export type TextScene   = {
     type: 'text';
     text: string
 }
+export type ImageScene   = {
+    type: 'image';
+    base64string: string
+}
 export type SelectScene = {
     type: 'select';
     text: string;
@@ -118,7 +133,7 @@ export type ManipulateScene = {
     sqlCheck: string;
     sqlPlaceholder: string
 }
-export type Scene = TextScene | SelectScene | ManipulateScene;
+export type Scene = TextScene | ImageScene | SelectScene | ManipulateScene;
 
 export type GameState = {
     curSceneIndex:  number,
@@ -177,12 +192,29 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
     }
     const copyright = copyrightNode.textContent?.trim() ?? '';
 
+    // Db data
+
     // Initial SQL script
+    let dbData: DbData;
+
     const initialSqlScriptNode = xml.querySelector('initial-sql-script');
     if (initialSqlScriptNode === null) {
-        return { ok: false, error: { kind: 'parse-xml', details: '<initial-sql-script>...</initial-sql-script> is missing' } };
+        const sqliteDbNode = xml.querySelector('sqlite-db');
+        if (sqliteDbNode === null) {
+            return { ok: false, error: { kind: 'parse-xml', details: '<initial-sql-script>...</initial-sql-script> as well as <sqlite-db>...</sqlite-db> are missing' } };
+        }
+        else {
+            const base64string = sqliteDbNode.textContent?.trim();
+            if (base64string === undefined) {
+                return { ok: false, error: { kind: 'parse-xml', details: 'base64string is missing' } };
+            }
+
+            dbData = { type: 'sqlite-db', data: decodeFromBase64(base64string) };
+        }
     }
-    const initialSqlScript = initialSqlScriptNode.textContent?.trim() ?? '';
+    else {
+        dbData = { type: 'initial-sql-script', sql: initialSqlScriptNode.textContent?.trim() ?? '' };
+    }
 
     // Scenes
     const scenesNode = xml.querySelector('scenes');
@@ -202,6 +234,20 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
             }
 
             return {ok: true, data: { type: 'text', text: textNode.textContent?.trim() ?? '' } };
+        }
+        else if (sceneNode.nodeName === 'image-scene') {
+            const base64string = sceneNode.textContent?.trim();
+            if (base64string === undefined) {
+                return { ok: false, error: { kind: 'parse-xml', details: 'base64string is missing' } };
+            }
+
+            // Remove potential `data:image/png;base64,` prefix 
+            if (base64string.startsWith('data:image/png;base64,')) {
+                return {ok: true, data: { type: 'image', base64string: base64string.slice('data:image/png;base64,'.length) } };
+            }
+            else {
+                return {ok: true, data: { type: 'image', base64string } };
+            }
         }
         else if (sceneNode.nodeName === 'select-scene') {
             const textNode = sceneNode.querySelector('text');
@@ -271,9 +317,14 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
 
     // Return the game
     return { ok: true, data: new Game(
-        title, teaser, copyright, initialSqlScript, scenes
+        title, teaser, copyright, dbData, scenes
     ) };
 }
+
+
+//////////////
+// Printing //
+//////////////
 
 export function gameToXML(g: Game): string {
     const scenes = g.scenes.map(scene => {
@@ -281,6 +332,9 @@ export function gameToXML(g: Game): string {
             return `        <text-scene>
             <text>${he.encode(scene.text, heOptions)}</text>
         </text-scene>`;
+        }
+        if (scene.type === 'image') {
+            return `        <image-scene>${he.encode(scene.base64string)}</image-scene>`;
         }
         else if (scene.type === 'select') {
             return `        <select-scene is-row-order-relevant="${scene.isRowOrderRelevant ? 'true' : 'false'}" is-col-order-relevant="${scene.isColOrderRelevant ? 'true' : 'false'}" are-col-names-relevant="${scene.areColNamesRelevant ? 'true' : 'false'}">
@@ -299,6 +353,9 @@ export function gameToXML(g: Game): string {
         }
     }).join("\n");
 
+    const dbData = g.dbData.type === 'initial-sql-script' ?
+        `<initial-sql-script>${he.encode(g.dbData.sql, heOptions)}</initial-sql-script>`
+        : `<sqlite-db>${he.encode(encodeToBase64(g.dbData.data), heOptions)}</sqlite-db>`;
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <game>
     <head>
@@ -309,9 +366,7 @@ export function gameToXML(g: Game): string {
     <scenes>
 ${scenes}
     </scenes>
-    <initial-sql-script>
-${he.encode(g.initialSqlScript, heOptions)}
-    </initial-sql-script>
+    ${dbData}
 </game>`;
 }
 
@@ -434,4 +489,24 @@ function permute(source: any[], permutation: number[]): any[] {
         target.push(source[permutation[i]]);
     }
     return target;
+}
+
+
+////////////////
+// Blank game //
+////////////////
+
+export function createBlankGame(name: string) {
+    return new Game(
+        name,
+        'Hier Teaser einfügen',
+        '© Hier Copyright einfügen',
+        { type: 'initial-sql-script', sql: `` },
+        [
+            {
+                type: 'text',
+                text: 'Szene 1'
+            }
+        ]
+    );
 }

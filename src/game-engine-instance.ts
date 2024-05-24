@@ -1,6 +1,6 @@
-import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, FetchXMLFail } from './game-pure';
-import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, FileSource, Success, assert, generateId } from './util';
+import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, FetchXMLFail, GameSource } from './game-pure';
+import { FetchDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
+import { Fail, RawSource, Success, assert, generateId } from './util';
 import { Schema } from './schema';
 
 
@@ -54,43 +54,50 @@ export class GameInstance {
     // Not part of `status`.
     private schema:      Promise<Success<Schema>    | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>;
 
-    constructor(gameSource: FileSource, initiallySkipFirstScenes?: number) {
+    constructor(source: GameSource, initiallySkipFirstScenes?: number) {
         this.id = 'game-instance-' + generateId();
 
         // `game`: Init; thereby track status
-        const gameSourceContent: Promise<Success<string> | Fail<FetchXMLFail>> =
-            gameSource.type === 'fetch'
-            ? fetch(gameSource.url).then((response: Response): Promise<Success<string> | Fail<FetchXMLFail>> => {
-                if (!response.ok) {
-                    // Fail: 'fetch-xml'
-                    return Promise.resolve({ ok: false, error: { kind: 'fetch-xml', url: gameSource.url } });
-                }
-                else {
-                    return response.text()
-                        .then((text: string): Promise<Success<string> | Fail<FetchXMLFail>> => {
-                            return Promise.resolve({ ok: true, data: text });
-                        });
-                }
-            })
-            : Promise.resolve({ ok: true, data: gameSource.content });
-        this.game = gameSourceContent
-            .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
-                if (!textRes.ok) {
-                    return { ok: false, error: textRes.error };
-                }
+        if (source.type === 'xml') {
+            const rawSource = source.source;
+            
+            const gameSourceContent: Promise<Success<string> | Fail<FetchXMLFail>> =
+                rawSource.type === 'fetch'
+                ? fetch(rawSource.url).then((response: Response): Promise<Success<string> | Fail<FetchXMLFail>> => {
+                    if (!response.ok) {
+                        // Fail: 'fetch-xml'
+                        return Promise.resolve({ ok: false, error: { kind: 'fetch-xml', url: rawSource.url } });
+                    }
+                    else {
+                        return response.text()
+                            .then((text: string): Promise<Success<string> | Fail<FetchXMLFail>> => {
+                                return Promise.resolve({ ok: true, data: text });
+                            });
+                    }
+                })
+                : Promise.resolve({ ok: true, data: rawSource.content });
+            this.game = gameSourceContent
+                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
+                    if (!textRes.ok) {
+                        return { ok: false, error: textRes.error };
+                    }
 
-                const xml = (new DOMParser()).parseFromString(textRes.data, 'application/xml');
-                const gameRes = xmlToGame(xml);
-                
-                // Fail: 'parse-xml'
-                if (!gameRes.ok) {
-                    return { ok: false, error: gameRes.error };
-                }
+                    const xml = (new DOMParser()).parseFromString(textRes.data, 'application/xml');
+                    const gameRes = xmlToGame(xml);
+                    
+                    // Fail: 'parse-xml'
+                    if (!gameRes.ok) {
+                        return { ok: false, error: gameRes.error };
+                    }
 
-                // Success
-                return { ok: true, data: gameRes.data };
-            })
-            .then(res => this.updateStatusAfterGameResult(res)); // Track status
+                    // Success
+                    return { ok: true, data: gameRes.data };
+                })
+                .then(res => this.updateStatusAfterGameResult(res)); // Track status
+        }
+        else {
+            this.game = Promise.resolve({ ok: true, data: source.source });
+        }
         
         // `userDb`:    Init; thereby track status
         // `refDb`:     Init; thereby track status
@@ -640,8 +647,8 @@ export class GameInstance {
 
         const game = gameRes.data;
 
-        const userDb = new StaticDb(gameRes.data.initialSqlScript);
-        const refDb = new StaticDb(gameRes.data.initialSqlScript);
+        const userDb = new StaticDb(gameRes.data.dbData);
+        const refDb = new StaticDb(gameRes.data.dbData);
 
         return Promise.resolve({
             ok: true,

@@ -1,8 +1,8 @@
-import { StaticDb, RunInitScriptFail, FetchInitScriptFail } from "./sql-js-api";
+import { StaticDb, RunInitScriptFail, FetchDbFail, ReadSqliteDbFail, DbData, DbSource } from "./sql-js-api";
 import { Schema, TableInfo, extractTableInfo } from "./schema";
 import { ParseSchemaFail, SqlResult, SqlResultError } from "./sql-js-api";
 
-import { Fail, FileSource, Success, assert, generateId, materializeFileSource } from "./util";
+import { Fail, RawSource, Success, assert, generateId, materializeBinarySource, materializeTextSource } from "./util";
 
 // Terminology:
 // - "instance": Represents basically the model behind a tab
@@ -25,7 +25,7 @@ import { Fail, FileSource, Success, assert, generateId, materializeFileSource } 
 
 export type StatusPending = { kind: 'pending' } // `db` has been requested to activate, but request may be unresolved
 export type StatusActive  = { kind: 'active'  } // `db` has been requested to activate and done so successfully
-export type StatusFailed  = { kind: 'failed', error: FetchInitScriptFail | RunInitScriptFail } // `db` has been requested to activate and failed to do so
+export type StatusFailed  = { kind: 'failed', error: FetchDbFail | RunInitScriptFail | ReadSqliteDbFail } // `db` has been requested to activate and failed to do so
 export type Status = StatusPending | StatusActive | StatusFailed
 
 export class BrowserInstance {
@@ -34,7 +34,7 @@ export class BrowserInstance {
 
     private name:   string;
 
-    private db:     Promise<Success<StaticDb> | Fail<FetchInitScriptFail>>;
+    private db:     Promise<Success<StaticDb> | Fail<FetchDbFail>>;
 
     private status: Status = { kind: 'pending' };
     
@@ -44,20 +44,33 @@ export class BrowserInstance {
      * - ... the db structure changes by reloading a new init script, the schema *is* updated.
      * - ... the db structure changes by queries, e.g. by prompting `ALTER TABLE` statements, the schema *is not* updated.
      */
-    private schema: Promise<Success<Schema> | Fail<FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail>> | null = null;
+    private schema: Promise<Success<Schema> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>> | null = null;
 
-    constructor(name: string, dbSource: FileSource) {
+    constructor(name: string, source: DbSource) {
         this.id = 'browser-instance-' + generateId();
 
         this.name = name;
-        this.db = materializeFileSource(dbSource).then(initialSqlScriptRes => {
-            if (initialSqlScriptRes.ok) {
-                return { ok: true, data: new StaticDb(initialSqlScriptRes.data) };
-            }
-            else {
-                return { ok: false, error: { kind: 'fetch-init-script', url: initialSqlScriptRes.error.url } };
-            }
-        });
+
+        if (source.type === 'initial-sql-script') {
+            this.db = materializeTextSource(source.source).then(initialSqlScriptRes => {
+                if (initialSqlScriptRes.ok) {
+                    return { ok: true, data: new StaticDb({ type: 'initial-sql-script', sql: initialSqlScriptRes.data } ) };
+                }
+                else {
+                    return { ok: false, error: { kind: 'fetch-db', url: initialSqlScriptRes.error.url } };
+                }
+            });
+        }
+        else {
+            this.db = materializeBinarySource(source.source).then(sqliteDbRes => {
+                if (sqliteDbRes.ok) {
+                    return { ok: true, data: new StaticDb({ type: 'sqlite-db', data: sqliteDbRes.data }) };
+                }
+                else {
+                    return { ok: false, error: { kind: 'fetch-db', url: sqliteDbRes.error.url } };
+                }
+            });
+        }
     }
 
     getStatus(): Status {
@@ -78,42 +91,16 @@ export class BrowserInstance {
     }
 
 
-    /////////////////////
-    // Database: Reset //
-    /////////////////////
-
-    setInitialSqlScript(sql: string) {
-        this.db = Promise.resolve({ ok: true, data: new StaticDb(sql) });
-
-        // Reset status
-        this.updateStatusAfterReset();
-        
-        // Invalidate schema
-        this.schema = null;
-    }
-
-
     ////////////////////////
     // Database: Requests //
     ////////////////////////
-
-    async getInitialSqlScript(): Promise<Success<string> | Fail<FetchInitScriptFail>> {
-        return this.db.then(dbRes => {
-            if (dbRes.ok) {
-                return { ok: true, data: dbRes.data.initialSqlScript };
-            }
-            else {
-                return { ok: false, error: dbRes.error };
-            }
-        });
-    }
 
     /**
      * Technically, no value really is requested.
      * The effect of this operation is though that the status is "active" or "failed"
      */
-    async resolve(): Promise<Success<void> | Fail<FetchInitScriptFail | RunInitScriptFail>> {
-        return this.db.then((dbRes: Success<StaticDb> | Fail<FetchInitScriptFail>): Promise<Success<void> | Fail<FetchInitScriptFail | RunInitScriptFail>> => {
+    async resolve(): Promise<Success<void> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>> {
+        return this.db.then((dbRes: Success<StaticDb> | Fail<FetchDbFail>): Promise<Success<void> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>> => {
             if (dbRes.ok) {
                 return dbRes.data.resolve();
             }
@@ -124,10 +111,10 @@ export class BrowserInstance {
         .then(res => this.trackStatus(res)); // Track status: "active" or "failed";
     }
 
-    async getSchema(): Promise<Success<Schema> | Fail<FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail>> {
+    async getSchema(): Promise<Success<Schema> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>> {
         // Cache schema
         if (this.schema === null) {
-            this.schema = this.db.then((dbRes: Success<StaticDb> | Fail<FetchInitScriptFail>): Promise<Success<Schema> | Fail<FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail>> => {
+            this.schema = this.db.then((dbRes: Success<StaticDb> | Fail<FetchDbFail>): Promise<Success<Schema> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>> => {
                 if (dbRes.ok) {
                     return dbRes.data.querySchema();
                 }
@@ -140,11 +127,11 @@ export class BrowserInstance {
         return this.schema;
     }
 
-    async exec(sql: string): Promise<Success<SqlResult> | Fail<FetchInitScriptFail | RunInitScriptFail>> {
+    async exec(sql: string): Promise<Success<SqlResult> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>> {
         // Track status: >= "pending"
         this.updateStatusAfterReset();
 
-        return this.db.then((dbRes: Success<StaticDb> | Fail<FetchInitScriptFail>): Promise<Success<SqlResult> | Fail<FetchInitScriptFail | RunInitScriptFail>> => {
+        return this.db.then((dbRes: Success<StaticDb> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>): Promise<Success<SqlResult> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>> => {
             if (dbRes.ok) {
                 return dbRes.data.exec(sql);
             }
@@ -173,7 +160,7 @@ export class BrowserInstance {
         }
     }
 
-    private async trackStatus<T>(res: Success<T> | Fail<FetchInitScriptFail | RunInitScriptFail>): Promise<Success<T> | Fail<FetchInitScriptFail | RunInitScriptFail>> {
+    private async trackStatus<T>(res: Success<T> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>): Promise<Success<T> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail>> {
         // "pending" -> "active"
         // "active"  -> "active"
         if ((this.status.kind === 'pending' || this.status.kind === "active") && res.ok) {
@@ -190,7 +177,7 @@ export class BrowserInstance {
         return res;
     }
 
-    private async trackStatusWithParseSchemaFail<T>(res: Success<T> | Fail<FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail>): Promise<Success<T> | Fail<FetchInitScriptFail | RunInitScriptFail | ParseSchemaFail>> {
+    private async trackStatusWithParseSchemaFail<T>(res: Success<T> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>): Promise<Success<T> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>> {
         // ParseSchemaFail counts as success here, because the database itself works
         const ok = res.ok || (res.error.kind === 'parse-schema');
 

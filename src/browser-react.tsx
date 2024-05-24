@@ -25,10 +25,10 @@ import './screen.css';
 // Local
 import { ColInfo, Schema, TableInfo } from './schema';
 import { BrowserInstance, Status } from './browser-instance';
-import { RunInitScriptFail, FetchInitScriptFail, SqlResult, ParseSchemaFail, sqlResultHash } from "./sql-js-api";
+import { RunInitScriptFail, FetchDbFail, SqlResult, ParseSchemaFail, sqlResultHash, DbSource } from "./sql-js-api";
 
-import { FileSource, NamedFileSource, assert } from "./util";
-import { Widget, ResultTableView, ClickableIcon, OpenFileModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor } from './react';
+import { Named, RawSource, assert } from "./util";
+import { Widget, ResultTableView, ClickableIcon, OpenFileModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor, OpenDbFileModal } from './react';
 import { GameDatabaseStatus, SchemaStatus } from './game-pure';
 
 
@@ -36,7 +36,7 @@ import { GameDatabaseStatus, SchemaStatus } from './game-pure';
 // React components //
 //////////////////////
 
-export function MultiBrowserComponentView({initialInstances, fileSources}: {initialInstances: BrowserInstance[], fileSources: NamedFileSource[]}) {
+export function MultiBrowserComponentView({initialInstances, fileSources}: {initialInstances: BrowserInstance[], fileSources: Named<DbSource>[]}) {
 
     const [instances, setInstances] = useState(initialInstances);
 
@@ -96,7 +96,7 @@ export function MultiBrowserComponentView({initialInstances, fileSources}: {init
     // Add instance //
     //////////////////
 
-    const onAddInstance = (source: NamedFileSource) => {
+    const onAddInstance = (source: Named<DbSource>) => {
         const newInstance = new BrowserInstance(source.name, source);
         const newIndex = instances.length;
 
@@ -121,43 +121,6 @@ export function MultiBrowserComponentView({initialInstances, fileSources}: {init
         // Select instance at next position
         setViewedInstanceIndex(index < newInstances.length ? index : index > 0 ? index-1 : null);
         viewedInstanceIndexChanged(); // Force re-rendering of the currently viewed instance (part of the above-described hack)
-    };
-
-
-    ///////////////////
-    // Edit instance //
-    ///////////////////
-
-    // Index of the instance currently being edited or `null` if none is being edited
-    const [editedInstanceIndex, setEditedInstanceIndex] = useState<number | null>(null);
-
-    const onEditStart = (index: number) => {
-        // Start edit mode
-        setEditedInstanceIndex(index);
-    };
-    const onEditEnd = () => {
-        // End edit mode
-        setEditedInstanceIndex(null);
-    };
-    const onEditEndWithSave = (name: string, sql: string) => {
-        // Assertion holds by UI design
-        assert(editedInstanceIndex !== null);
-
-        // Mutate the instance; thereby invalidate schema
-        instances[editedInstanceIndex].setName(name);
-        instances[editedInstanceIndex].setInitialSqlScript(sql);
-
-        // Now update status
-        updateStatusForSingle(editedInstanceIndex);
-
-        // Update currently viewed inst if it was just edited
-        // (part of the above-described hack)
-        if (editedInstanceIndex === viewedInstanceIndex) {
-            viewedInstanceIndexChanged();
-        }
-
-        // End edit mode
-        setEditedInstanceIndex(null);
     };
 
 
@@ -187,7 +150,7 @@ export function MultiBrowserComponentView({initialInstances, fileSources}: {init
 
     return (
         <>
-            <MultiInstanceBrowserHeaderView fileSources={fileSources} viewedInstanceIndex={viewedInstanceIndex} onEditStart={onEditStart} onSelect={onAddInstance} />
+            <MultiInstanceBrowserHeaderView fileSources={fileSources} viewedInstanceIndex={viewedInstanceIndex} onSelect={onAddInstance} />
             <div>
                 <Tabs selectedIndex={viewedInstanceIndex ?? 0} onSelect={(index) => { setViewedInstanceIndex(index); setViewedInstanceCounter(viewedInstanceCounter+1); }} forceRenderTabPanel={true}>
                     <TabList className='tabbed-header'>
@@ -200,7 +163,7 @@ export function MultiBrowserComponentView({initialInstances, fileSources}: {init
     );
 }
 
-function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onEditStart, onSelect}: {fileSources: NamedFileSource[], viewedInstanceIndex: number | null, onEditStart: (index: number) => void, onSelect: (source: NamedFileSource) => void}) {
+function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onSelect}: {fileSources: Named<DbSource>[], viewedInstanceIndex: number | null, onSelect: (source: Named<DbSource>) => void}) {
 
     const [showOpenModal, setShowOpenModal ] = useState(false);
 
@@ -224,7 +187,12 @@ function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onEdi
                     </li>
                 </ul>
             </div>
-            <OpenFileModal title="Datenbank laden" fileUploadTitle='Datenbankdatei hochladen' fileIconType='file-sql' fileAccept='.sql' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
+            <OpenDbFileModal
+                providedFileSources={fileSources}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+                onOpenFile={onSelect}
+            />
         </>
     );
 }
@@ -302,7 +270,7 @@ function StatusView({status}: {status: Status}) {
             </Alert>
         );
     }
-    else if (status.kind === 'failed' && status.error.kind === 'fetch-init-script') {
+    else if (status.kind === 'failed' && status.error.kind === 'fetch-db') {
         return (
             <Alert className="status-view" variant="danger">
                 Fehler beim Laden der Skript-Datei <code>{status.error.url}</code>
@@ -402,6 +370,7 @@ function ResultSuccessView({sql, result, onClose}: {sql: string, result: initSql
                 </SyntaxHighlighter>
                 <CloseButton onClick={onClose} />
             </ListGroup.Item>
+            { result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null }
             {result.map((r, i) => <ResultTableView key={i} result={r} />)}
         </ListGroup>
     );

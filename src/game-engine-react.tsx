@@ -330,23 +330,68 @@ function SceneWidget({game, gameState, onNextScene}: {game: Game, gameState: Gam
 }
 
 function SceneWithNextButtonView({scene, nextButtonDisabled, onNextScene}: {scene: Scene, nextButtonDisabled: boolean, onNextScene: () => void}) {
-    return (
-        <>
-            {scene.text}
-            <div className="text-center">
-                <Button onClick={onNextScene} disabled={nextButtonDisabled}>Weiter</Button>
-            </div>
-        </>
-    );
+    if (scene.type == 'image') {
+        return (
+            <>
+                <div className="text-center">
+                    <img src={'data:image/png;base64,' + scene.base64string} alt="" />
+                </div>
+                <div className="text-center">
+                    <Button onClick={onNextScene} disabled={nextButtonDisabled}>Weiter</Button>
+                </div>
+            </>
+        );
+    }
+    else {
+        return (
+            <>
+                <RenderWithLineBreaks text={scene.text} />
+                <div className="text-center">
+                    <Button onClick={onNextScene} disabled={nextButtonDisabled}>Weiter</Button>
+                </div>
+            </>
+        );
+    }
 }
 
 function SceneView({scene}: {scene: Scene}) {
-    return (
-        <div>
-            {scene.text}
-        </div>
-    );
+    if (scene.type == 'image') {
+        return (
+            <div className="text-center">
+                <img src={'data:image/png;base64,' + scene.base64string} alt="" />
+            </div>
+        );
+    }
+    else {
+        return (
+            <div>
+                <RenderWithLineBreaks text={scene.text} />
+            </div>
+        );
+    }
 }
+
+// TODO integrate properly
+interface RenderWithLineBreaksProps {
+    text: string;
+  }
+  
+  const RenderWithLineBreaks: React.FC<RenderWithLineBreaksProps> = ({ text }) => {
+    // Split text on newlines
+    const parts = text.split('\n');
+  
+    return (
+      <>
+        {parts.map((part, index) => (
+          <React.Fragment key={index}>
+            {part}
+            {index !== parts.length - 1 && <br />}
+          </React.Fragment>
+        ))}
+      </>
+    );
+  };
+
 
 function QueryWidget({game, s, onSubmit, onResetDbInCurScene, onShowHint}: {game: Game, s: GameState, onSubmit: () => void, onResetDbInCurScene: () => void, onShowHint: () => void}) {
     // Use the SQL value from global context
@@ -455,6 +500,7 @@ function GameResultCorrectSuccView({res, onClose}: {res: SqlResultSucc, onClose:
                     {res.sql}
                 </SyntaxHighlighter>
             </ListGroup.Item>
+            {res.result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null}
             {res.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-success bg-opacity-25 border-success'} />)}
         </ListGroup>
     );
@@ -485,6 +531,7 @@ function GameResultMissSuccView({res, onClose}: {res: SqlResultSucc, onClose: ()
                     {res.sql}
                 </SyntaxHighlighter>
             </ListGroup.Item>
+            {res.result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null}
             {res.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-warning bg-opacity-25 border-warning'} />)}
         </ListGroup>
     );
@@ -511,6 +558,7 @@ function GameResultHintSelectView({expectedResult, onClose}: {expectedResult: Sq
         return (
             <ListGroup className="result-view">
                 <ResultViewHeader bsVariant="info" title={<em>Tipp: Erwartetes Ergebnis:</em>} onClose={onClose} />
+                {expectedResult.result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null}
                 {expectedResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-info bg-opacity-25 border-info'} />)}
             </ListGroup>
         );
@@ -537,6 +585,7 @@ function GameResultHintManipulateView({checkResult, onClose}: {checkResult: SqlR
                         Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter> das folgende Ergebnis liefert:
                     </p>
                 </ListGroup.Item>
+                {checkResult.result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null}
                 {checkResult.result.map((r, i) => <ResultTableView key={i} result={r} className={'bg-info bg-opacity-25 border-info'} />)}
             </ListGroup>
         );

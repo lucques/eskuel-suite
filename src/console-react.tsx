@@ -29,10 +29,10 @@ import './screen.css';
 
 import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
-import { FileSource, NamedFileSource, assert } from "./util";
+import { Named, RawSource, assert } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene } from './game-pure';
-import { ClickableIcon, IconActionButton, IconLinkButton, OpenFileModal, ResultTableView, Widget } from './react';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, GameSource } from './game-pure';
+import { ClickableIcon, IconActionButton, IconLinkButton, OpenFileModal, OpenGameFileModal, ResultTableView, Widget } from './react';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
 export { Game } from './game-pure';
@@ -42,7 +42,7 @@ export { Game } from './game-pure';
 // React components //
 //////////////////////
 
-export function GameConsoleView({fileSources, initialFileSource = undefined, initiallySkipFirstScenes = undefined}: {fileSources: NamedFileSource[], initialFileSource?: NamedFileSource, initiallySkipFirstScenes?: number}) {
+export function GameConsoleView({fileSources, initialFileSource = undefined, initiallySkipFirstScenes = undefined}: {fileSources: Named<GameSource>[], initialFileSource?: Named<GameSource>, initiallySkipFirstScenes?: number}) {
     
     const [instance, setInstance] = useState<GameInstance | null>(null);
 
@@ -53,7 +53,7 @@ export function GameConsoleView({fileSources, initialFileSource = undefined, ini
         }
     }, []);
 
-    const onSelectGame = (source: FileSource) => {
+    const onSelectGame = (source: GameSource) => {
         setInstance(new GameInstance(source));
     }
 
@@ -73,7 +73,7 @@ export function GameConsoleView({fileSources, initialFileSource = undefined, ini
     );
 }
 
-function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: NamedFileSource[], onSelectGame: (source: FileSource) => void}) {
+function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: Named<GameSource>[], onSelectGame: (source: GameSource) => void}) {
 
     const [showOpenModal, setShowOpenModal ] = useState(false);
 
@@ -89,7 +89,12 @@ function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: NamedF
                         <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
-                <OpenFileModal title="Spiel laden" fileUploadTitle='Spieldatei hochladen' fileIconType='file-xml' fileAccept='.xml' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelectGame} />
+                <OpenGameFileModal
+                    providedFileSources={fileSources}
+                    onOpenFile={onSelectGame}
+                    show={showOpenModal}
+                    setShow={setShowOpenModal}
+                />
             </div>
         </>
     );

@@ -30,15 +30,16 @@ import 'react-tabs/style/react-tabs.css';
 import './screen.css';
 
 
-import { StaticDb, RunInitScriptFail, FetchInitScriptFail } from "./sql-js-api";
+import { StaticDb, RunInitScriptFail, FetchDbFail } from "./sql-js-api";
 import { ColInfo, TableInfo } from './schema';
-import { NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
+import { assert, getFilenameWithoutExtension, Named, RawSource } from "./util";
 import { GameInstance } from './game-engine-instance';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 import { EditorInstance as EditorInstance } from './game-editor-instance';
 import { EditorInstanceView, MultiEditorComponentView } from './game-editor-react';
 import { BrowserInstance } from './browser-instance';
 import { MultiBrowserComponentView } from './browser-react';
+import { GameSource } from './game-pure';
 
 export { Game } from './game-pure';
 
@@ -52,7 +53,7 @@ export class GameEditorComponent {
     private instance: EditorInstance;
 
     constructor(readonly divId: string, name: string, url: string) {
-        this.instance = new EditorInstance(name, { type: 'fetch', url });
+        this.instance = new EditorInstance(name, { type: 'xml', source: { type: 'fetch', url }});
     }
 
     init() {
@@ -76,7 +77,7 @@ export class GameEditorComponent {
 
 export class MultiEditorComponent {
 
-    private fileSources: NamedFileSource[] = [];
+    private fileSources: Named<GameSource>[] = [];
     private instances: EditorInstance[] = [];
 
     constructor(readonly divId: string) { }
@@ -84,18 +85,16 @@ export class MultiEditorComponent {
     addUrl(url: string) {
         const name = getFilenameWithoutExtension(url);
 
-        this.fileSources.push({ type: 'fetch', url, name });
+        this.fileSources.push({ type: 'xml', source: { type: 'fetch', url }, name });
     }
 
     addAndOpenUrl(url: string) {
         const name = getFilenameWithoutExtension(url);
-        const db = new EditorInstance(name, {
-            type: 'fetch',
-            url: url
-        });
+        const namedGame: Named<GameSource> = { type: 'xml', source: { type: 'fetch', url }, name };
+        const newInstance = new EditorInstance(name, namedGame);
 
-        this.fileSources.push({ type: 'fetch', url, name });
-        this.instances.push(db);
+        this.fileSources.push(namedGame);
+        this.instances.push(newInstance);
     }
 
     init() {

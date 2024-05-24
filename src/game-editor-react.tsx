@@ -35,12 +35,12 @@ const customStyle = {
 import './screen.css';
 
 
-import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
+import { DbSource, FetchDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
-import { FileSource, NamedFileSource, assert, reorder } from "./util";
+import { Named, RawSource, assert, reorder } from "./util";
 import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, GameDatabaseStatus } from './game-pure';
-import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, OpenFileModal, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, GameDatabaseStatus, ImageScene, GameSource, createBlankGame } from './game-pure';
+import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbFileModal, OpenFileModal, OpenGameFileModal, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
 import { EditorInstance } from './game-editor-instance';
 import { BrowserInstance } from './browser-instance';
 
@@ -52,9 +52,10 @@ export { Game } from './game-pure';
 ///////////////////
 
 type EditableTextScene = TextScene & { key: string };
+type EditableImageScene = ImageScene & { key: string };
 type EditableSelectScene = SelectScene & { key: string };
 type EditableManipulateScene = ManipulateScene & { key: string };
-type EditableScene = EditableTextScene | EditableSelectScene | EditableManipulateScene;
+type EditableScene = EditableTextScene | EditableImageScene | EditableSelectScene | EditableManipulateScene;
 
 let nextEditableSceneKey = 0;
 function createEditableScene(scene: Scene): EditableScene {
@@ -85,7 +86,7 @@ export const useSqlValue = () => useContext(EditorInstanceContext);
 // React components //
 //////////////////////
 
-export function MultiEditorComponentView({initialInstances, fileSources}: {initialInstances: EditorInstance[], fileSources: NamedFileSource[]}) {
+export function MultiEditorComponentView({initialInstances, fileSources}: {initialInstances: EditorInstance[], fileSources: Named<GameSource>[]}) {
 
     const [instances, setInstances] = useState(initialInstances);
 
@@ -145,7 +146,13 @@ export function MultiEditorComponentView({initialInstances, fileSources}: {initi
     // Add instance //
     //////////////////
 
-    const onAddInstance = (source: NamedFileSource) => {
+    const onNewInstance = (name: string) => {
+        const game: Game = createBlankGame(name);
+
+        onAddInstance({ name, type: 'object', source: game });
+    }
+
+    const onAddInstance = (source: Named<GameSource>) => {
         const newInstance = new EditorInstance(source.name, source);
         const newIndex = instances.length;
 
@@ -233,7 +240,7 @@ export function MultiEditorComponentView({initialInstances, fileSources}: {initi
     return (
         // TODO: Handle this differently, status must go to `MultiInstanceEditorHeaderView` somehow, not via `viewedInstanceIndex`
         <>
-            <MultiInstanceEditorHeaderView fileSources={fileSources} viewedInstanceIndex={(viewedInstanceIndex !== null && instances[viewedInstanceIndex].getStatus().kind === 'active') ? viewedInstanceIndex : null} onSave={onSave} onSelect={onAddInstance} />
+            <MultiInstanceEditorHeaderView fileSources={fileSources} viewedInstanceIndex={(viewedInstanceIndex !== null && instances[viewedInstanceIndex].getStatus().kind === 'active') ? viewedInstanceIndex : null} onSave={onSave} onSelect={onAddInstance} onCreate={onNewInstance} />
             <div>
                 <Tabs selectedIndex={viewedInstanceIndex ?? 0} onSelect={(index) => { setViewedInstanceIndex(index); setViewedInstanceCounter(viewedInstanceCounter+1); }} forceRenderTabPanel={true}>
                     <TabList className='tabbed-header'>
@@ -246,8 +253,9 @@ export function MultiEditorComponentView({initialInstances, fileSources}: {initi
     );
 }
 
-function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave, onSelect}: {fileSources: NamedFileSource[], viewedInstanceIndex: number | null, onSave: (index: number) => void, onSelect: (source: NamedFileSource) => void}) {
+function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave, onSelect, onCreate}: {fileSources: Named<GameSource>[], viewedInstanceIndex: number | null, onSave: (index: number) => void, onSelect: (source: Named<GameSource>) => void, onCreate: (name: string) => void}) {
 
+    const [showNewModal, setShowNewModal ] = useState(false);
     const [showOpenModal, setShowOpenModal ] = useState(false);
 
     return (
@@ -256,6 +264,7 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Spieleeditor</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
+                        <IconActionButton type='new'  onClick={() => setShowNewModal(true)} />
                         <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
                         <IconActionButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
                     </li>
@@ -263,8 +272,19 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                         <IconLinkButton type='home' href="../" />
                     </li>
                 </ul>
-            </div>             
-            <OpenFileModal title="Spiel laden"  fileUploadTitle='Spieldatei hochladen' fileIconType='file-xml' fileAccept='.xml' providedFileSources={fileSources} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
+            </div>
+            <NewGameFileModal
+                onCreate={onCreate}
+                show={showNewModal}
+                setShow={setShowNewModal}
+            />
+
+            <OpenGameFileModal
+                providedFileSources={fileSources}
+                onOpenFile={onSelect}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+            />
         </>
     );
 }
@@ -350,8 +370,8 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         });
     }
 
-    const onSetInitialSqlSource = (initSqlSource: FileSource) => {
-        instance.onCommitInitialSqlScript(initSqlSource).then(() => {
+    const onSetDbSource = (dbSource: DbSource) => {
+        instance.onCommitDbSource(dbSource).then(() => {
             updateSchemaStatus();
         });
     }
@@ -529,7 +549,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
                         <MetaDataView title={title} setTitle={setTitle} teaser={teaser} setTeaser={setTeaser} copyright={copyright} setCopyright={setCopyright} onCommitMetaData={onCommitMetaData} />
                         <EditableScenesWidget scenes={scenes} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onAddSceneStart={onAddSceneStart} onDeleteScene={onDeleteScene} onReorderScenes={onReorderScenes} />
                         <div className="editor-sidebar">
-                            <InitScriptWidget gameDatabaseStatus={gameDatabaseStatus} setInitialSqlSource={onSetInitialSqlSource} />
+                            <InitScriptWidget gameDatabaseStatus={gameDatabaseStatus} setDbSource={onSetDbSource} />
                         </div>
                     </div>
                 )
@@ -607,12 +627,12 @@ function MetaDataView({title, setTitle, teaser, setTeaser, copyright, setCopyrig
     );
 }
 
-function InitScriptWidget({gameDatabaseStatus, setInitialSqlSource}: {gameDatabaseStatus: GameDatabaseStatus, setInitialSqlSource: (initSqlSource: FileSource) => void}) {
+function InitScriptWidget({gameDatabaseStatus, setDbSource}: {gameDatabaseStatus: GameDatabaseStatus, setDbSource: (source: DbSource) => void}) {
 
     const [showOpenModal, setShowOpenModal ] = useState(false);
 
-    const onSelect = (source: NamedFileSource) => {
-        setInitialSqlSource(source);
+    const onSelect = (source: Named<DbSource>) => {
+        setDbSource(source);
     }
 
     return (
@@ -634,7 +654,12 @@ function InitScriptWidget({gameDatabaseStatus, setInitialSqlSource}: {gameDataba
                     }
                 </MultiWidget>
             </div>
-            <OpenFileModal title="Datenbank laden" fileUploadTitle='Datenbankdatei hochladen' fileIconType='file-sql' fileAccept='.sql' providedFileSources={[]} show={showOpenModal} setShow={setShowOpenModal} onOpenFile={onSelect} />
+            <OpenDbFileModal
+                providedFileSources={[]}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+                onOpenFile={onSelect}
+            />
         </>
     );
 }
@@ -647,7 +672,7 @@ function GameDatabaseStatusShortView({status}: {status: GameDatabaseStatus}) {
             </Alert>
         );
     }
-    else if (status.kind === 'failed' && status.error.kind === 'fetch-init-script') {
+    else if (status.kind === 'failed' && status.error.kind === 'fetch-db') {
         return (
             <Alert className="game-database-status-short-view" variant="danger">
                 Fehler beim Laden der Datei
@@ -718,7 +743,7 @@ function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneS
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
                                             >
-                                                <EditableSceneView scene={scene} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onDeleteScene={onDeleteScene} />
+                                                <EditableSceneView scene={scene} deletable={scenes.length > 1} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onDeleteScene={onDeleteScene} />
                                             </div>
                                         )}
                                     </Draggable>
@@ -734,22 +759,25 @@ function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneS
     );
 }
 
-function EditableSceneView({scene, onEditTextSceneStart, onEditSelectSceneStart, onEditManipulateSceneStart, onDeleteScene}: {scene: EditableScene, onEditTextSceneStart: (scene: EditableTextScene) => void, onEditSelectSceneStart: (scene: EditableSelectScene) => void, onEditManipulateSceneStart: (scene: EditableManipulateScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
+function EditableSceneView({scene, deletable, onEditTextSceneStart, onEditSelectSceneStart, onEditManipulateSceneStart, onDeleteScene}: {scene: EditableScene, deletable: boolean, onEditTextSceneStart: (scene: EditableTextScene) => void, onEditSelectSceneStart: (scene: EditableSelectScene) => void, onEditManipulateSceneStart: (scene: EditableManipulateScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
     if (scene.type === 'text') {
-        return <EditableTextSceneView scene={scene} onEdit={() => onEditTextSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
+        return <EditableTextSceneView scene={scene} deletable={deletable} onEdit={() => onEditTextSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
+    }
+    else if (scene.type === 'image') {
+        return <EditableImageSceneView scene={scene} deletable={deletable} onEdit={() => {}} onDelete={() => onDeleteScene(scene)} />;
     }
     else if (scene.type === 'select') {
-        return <EditableSelectSceneView scene={scene} onEdit={() => onEditSelectSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableSelectSceneView scene={scene} deletable={deletable} onEdit={() => onEditSelectSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
     else {
-        return <EditableManipulateSceneView scene={scene} onEdit={() => onEditManipulateSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableManipulateSceneView scene={scene} deletable={deletable} onEdit={() => onEditManipulateSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
 }
 
-function EditableTextSceneView({scene, onEdit, onDelete}: {scene: EditableTextScene, onEdit: () => void, onDelete: () => void}) {
+function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableTextScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-text-scene-view">
-            <EditableSceneViewHeader bsVariant="secondary" title={<strong><em>Text</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="secondary" deletable={deletable} title={<strong><em>Text</em></strong>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-secondary bg-opacity-25 border-secondary">
                 {scene.text}
             </ListGroup.Item>
@@ -757,10 +785,21 @@ function EditableTextSceneView({scene, onEdit, onDelete}: {scene: EditableTextSc
     );
 }
 
-function EditableSelectSceneView({scene, onEdit, onDelete}: {scene: EditableSelectScene, onEdit: () => void, onDelete: () => void}) {
+function EditableImageSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableImageScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+    return (
+        <ListGroup className="editable-image-scene-view">
+            <EditableSceneViewHeader bsVariant="warning" deletable={deletable} title={<strong><em>Image</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <ListGroup.Item className="bg-warning bg-opacity-25 border-warning">
+                (Hier kommt das Bild hin -- noch nicht implementiert)
+            </ListGroup.Item>
+        </ListGroup>
+    );
+}
+
+function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableSelectScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-select-scene-view">
-            <EditableSceneViewHeader bsVariant="primary" title={<strong><em>Select</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="primary" deletable={deletable} title={<strong><em>Select</em></strong>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-primary bg-opacity-25 border-primary">
                 {scene.text}
             </ListGroup.Item>
@@ -811,10 +850,10 @@ function EditableSelectSceneView({scene, onEdit, onDelete}: {scene: EditableSele
     );
 }
 
-function EditableManipulateSceneView({scene, onEdit, onDelete}: {scene: EditableManipulateScene, onEdit: () => void, onDelete: () => void}) {
+function EditableManipulateSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableManipulateScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-manipulte-scene-view">
-            <EditableSceneViewHeader bsVariant="success" title={<strong><em>Manipulate</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="success" deletable={deletable} title={<strong><em>Manipulate</em></strong>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-success bg-opacity-25 border-success">
                 {scene.text}
             </ListGroup.Item>
@@ -850,13 +889,13 @@ function EditableManipulateSceneView({scene, onEdit, onDelete}: {scene: Editable
     );
 }
 
-function EditableSceneViewHeader({bsVariant, title, onEdit, onDelete}: {bsVariant: string, title: ReactElement, onEdit: () => void, onDelete: () => void}) {
+function EditableSceneViewHeader({bsVariant, deletable, title, onEdit, onDelete}: {bsVariant: string, deletable: boolean, title: ReactElement, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup.Item className={classNames('editable-scene-view-header', 'd-flex', 'justify-content-between', 'align-items-start', 'bg-'+bsVariant, 'bg-opacity-50', 'border-'+bsVariant)}>
             <p>{title}</p>
             <div>
                 <ClickableIcon type='edit' onClick={onEdit} />
-                <ClickableIcon type='close' onClick={onDelete} />
+                { deletable && <ClickableIcon type='close' onClick={onDelete} /> }
             </div>
         </ListGroup.Item>
     );

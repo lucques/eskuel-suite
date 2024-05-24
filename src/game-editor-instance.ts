@@ -1,6 +1,6 @@
-import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, ParseXMLFail, Scene, FetchXMLFail } from './game-pure';
-import { FetchInitScriptFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, FetchFail, FileSource, Success, assert, generateId, materializeFileSource } from './util';
+import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, ParseXMLFail, Scene, FetchXMLFail, GameSource } from './game-pure';
+import { DbData, DbSource, FetchDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
+import { Fail, FetchFail, RawSource, Success, assert, generateId, materializeBinarySource, materializeTextSource } from './util';
 import { Schema } from './schema';
 
 
@@ -39,45 +39,55 @@ export class EditorInstance {
     // Not part of `status`.
     private schema:      Promise<Success<Schema>    | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>;
 
-    constructor(name: string, gameSource: FileSource) {
+    constructor(name: string, source: GameSource) {
         this.id = 'editor-instance-' + generateId();
 
         this.name = name;
 
         // `game`: Init; thereby track status
-        const gameSourceContent: Promise<Success<string> | Fail<FetchXMLFail>> =
-            gameSource.type === 'fetch'
-            ? fetch(gameSource.url).then((response: Response): Promise<Success<string> | Fail<FetchXMLFail>> => {
-                if (!response.ok) {
-                    // Fail: 'fetch-xml'
-                    return Promise.resolve({ ok: false, error: { kind: 'fetch-xml', url: gameSource.url } });
-                }
-                else {
-                    return response.text()
-                        .then((text: string): Promise<Success<string> | Fail<FetchXMLFail>> => {
-                            return Promise.resolve({ ok: true, data: text });
-                        });
-                }
-            })
-            : Promise.resolve({ ok: true, data: gameSource.content });
-        this.game = gameSourceContent
-            .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
-                if (!textRes.ok) {
-                    return { ok: false, error: textRes.error };
-                }
+        if (source.type === 'xml') {
+            const rawSource = source.source;
 
-                const xml = (new DOMParser()).parseFromString(textRes.data, 'application/xml');
-                const gameRes = xmlToGame(xml);
-                
-                // Fail: 'parse-xml'
-                if (!gameRes.ok) {
-                    return { ok: false, error: gameRes.error };
-                }
+            const sourceContent: Promise<Success<string> | Fail<FetchXMLFail>> =
+                (rawSource.type === 'fetch'
+                    ? fetch(rawSource.url).then((response: Response): Promise<Success<string> | Fail<FetchXMLFail>> => {
+                        if (!response.ok) {
+                            // Fail: 'fetch-xml'
+                            return Promise.resolve({ ok: false, error: { kind: 'fetch-xml', url: rawSource.url } });
+                        }
+                        else {
+                            return response.text()
+                                .then((text: string): Promise<Success<string> | Fail<FetchXMLFail>> => {
+                                    return Promise.resolve({ ok: true, data: text });
+                                });
+                        }
+                    })
+                    : Promise.resolve({ ok: true, data: rawSource.content })
+                );
 
-                // Success
-                return { ok: true, data: gameRes.data };
-            })
-            .then(res => this.updateStatusAfterGameResult(res)); // Track status
+            this.game = sourceContent
+                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
+                    if (!textRes.ok) {
+                        return { ok: false, error: textRes.error };
+                    }
+
+                    const xml = (new DOMParser()).parseFromString(textRes.data, 'application/xml');
+                    const gameRes = xmlToGame(xml);
+                    
+                    // Fail: 'parse-xml'
+                    if (!gameRes.ok) {
+                        return { ok: false, error: gameRes.error };
+                    }
+
+                    // Success
+                    return { ok: true, data: gameRes.data };
+                });
+        }
+        else {
+            this.game = Promise.resolve({ ok: true, data: source.source });
+        }
+        // Track status
+        this.game = this.game.then(res => this.updateStatusAfterGameResult(res));
         
         // `db`:     Init
         // `schema`: Init
@@ -143,32 +153,51 @@ export class EditorInstance {
         const game  = gameRes.data;
 
         // Update game
-        const newGame = new Game(title, teaser, copyright, game.initialSqlScript, game.scenes);
+        const newGame = new Game(title, teaser, copyright, game.dbData, game.scenes);
         this.game = Promise.resolve({ok: true, data: newGame});
 
         // No need to update database
     }
 
-    async onCommitInitialSqlScript(dbSource: FileSource): Promise<void> {
+    async onCommitDbSource(source: DbSource): Promise<void> {
         const gameRes = await this.game;
         assert(gameRes.ok, 'Illegal state');
         const game  = gameRes.data;
 
-        // Materialize initial SQL script
-        return materializeFileSource(dbSource).then((sqlRes: Success<string> | Fail<FetchFail>) => {
-            if (sqlRes.ok) {
-                // Update game
-                const newGame = new Game(game.title, game.teaser, game.copyright, sqlRes.data, game.scenes);
-                this.game = Promise.resolve({ok: true, data: newGame});
+        if (source.type === 'initial-sql-script') {
+            // Materialize initial SQL script
+            return materializeTextSource(source.source).then((sqlRes: Success<string> | Fail<FetchFail>) => {
+                if (sqlRes.ok) {
+                    // Update game
+                    const newGame = new Game(game.title, game.teaser, game.copyright, { type: 'initial-sql-script', sql: sqlRes.data }, game.scenes);
+                    this.game = Promise.resolve({ok: true, data: newGame});
 
-                // Update database
-                Promise.resolve(this.resetDbAndSchema());
-            }
-            else {
-                // Update game
-                this.game = Promise.resolve({ok: false, error: { kind: 'fetch-xml', url: sqlRes.error.url }});
-            }
-        });
+                    // Update database
+                    Promise.resolve(this.resetDbAndSchema());
+                }
+                else {
+                    // Update game
+                    this.game = Promise.resolve({ok: false, error: { kind: 'fetch-xml', url: sqlRes.error.url }});
+                }
+            });
+        }
+        else {
+            // Materialize SQLite db
+            return materializeBinarySource(source.source).then((dataRes: Success<Uint8Array> | Fail<FetchFail>) => {
+                if (dataRes.ok) {
+                    // Update game
+                    const newGame = new Game(game.title, game.teaser, game.copyright, { type: 'sqlite-db', data: dataRes.data }, game.scenes);
+                    this.game = Promise.resolve({ok: true, data: newGame});
+
+                    // Update database
+                    Promise.resolve(this.resetDbAndSchema());
+                }
+                else {
+                    // Update game
+                    this.game = Promise.resolve({ok: false, error: { kind: 'fetch-xml', url: dataRes.error.url }});
+                }
+            });
+        }
     }
 
     async onCommitScene(index: number, scene: Scene) {
@@ -181,7 +210,7 @@ export class EditorInstance {
 
         // Update game
         const newScenes = game.scenes.map((s, i) => i === index ? scene : s);
-        const newGame = new Game(game.title, game.teaser, game.copyright, game.initialSqlScript, newScenes);
+        const newGame = new Game(game.title, game.teaser, game.copyright, game.dbData, newScenes);
         this.game = Promise.resolve({ok: true, data: newGame});
 
         // Nothing to do with the database
@@ -194,7 +223,7 @@ export class EditorInstance {
 
         // Update game
         const newScenes = [...game.scenes, scene];
-        const newGame = new Game(game.title, game.teaser, game.copyright, game.initialSqlScript, newScenes);
+        const newGame = new Game(game.title, game.teaser, game.copyright, game.dbData, newScenes);
         this.game = Promise.resolve({ok: true, data: newGame});
 
         // Nothing to do with the database
@@ -210,7 +239,7 @@ export class EditorInstance {
 
         // Update game
         const newScenes = game.scenes.filter((_, i) => i !== index);
-        const newGame = new Game(game.title, game.teaser, game.copyright, game.initialSqlScript, newScenes);
+        const newGame = new Game(game.title, game.teaser, game.copyright, game.dbData, newScenes);
         this.game = Promise.resolve({ok: true, data: newGame});
 
         // Nothing to do with the database
@@ -226,7 +255,7 @@ export class EditorInstance {
 
         // Update game
         const newScenes = indices.map(i => game.scenes[i]);
-        const newGame = new Game(game.title, game.teaser, game.copyright, game.initialSqlScript, newScenes);
+        const newGame = new Game(game.title, game.teaser, game.copyright, game.dbData, newScenes);
         this.game = Promise.resolve({ok: true, data: newGame});
 
         // Nothing to do with the database
@@ -280,7 +309,7 @@ export class EditorInstance {
         const db = this.game
             .then((gameRes: Success<Game> | Fail<XMLFail | RunInitScriptFail>): Success<StaticDb> | Fail<XMLFail | RunInitScriptFail> => {
                 if (gameRes.ok) {
-                    return { ok: true, data: new StaticDb(gameRes.data.initialSqlScript) };
+                    return { ok: true, data: new StaticDb(gameRes.data.dbData) };
                 }
                 else {
                     return gameRes;
@@ -294,11 +323,11 @@ export class EditorInstance {
                     const res: Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> =
                         dbRes.data.resolve().then(
                             ()      => { return Promise.resolve(dbRes); },
-                            (error: RunInitScriptFail | FetchInitScriptFail) => {
-                                const e: RunInitScriptFail | FetchInitScriptFail = error;
+                            (error: RunInitScriptFail | FetchDbFail) => {
+                                const e: RunInitScriptFail | FetchDbFail = error;
 
                                 // Assertion holds because there is no SQL file to fetch
-                                assert(error.kind !== 'fetch-init-script');
+                                assert(error.kind !== 'fetch-db');
                                 return { ok: false, error: error };
                             }
                         );
@@ -310,7 +339,7 @@ export class EditorInstance {
         const schema = db
             .then((db: Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>> => {
                 if (db.ok) {
-                    return db.data.querySchema().then((schema: Success<Schema> | Fail<RunInitScriptFail | FetchInitScriptFail | ParseSchemaFail>): Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail> => {
+                    return db.data.querySchema().then((schema: Success<Schema> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>): Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail> => {
                         if (schema.ok) {
                             return { ok: true, data: schema.data };
                         }

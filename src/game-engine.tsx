@@ -29,12 +29,13 @@ import 'react-tabs/style/react-tabs.css';
 import './screen.css';
 
 
-import { StaticDb, RunInitScriptFail, FetchInitScriptFail } from "./sql-js-api";
+import { StaticDb, RunInitScriptFail, FetchDbFail } from "./sql-js-api";
 import { ColInfo, TableInfo } from './schema';
-import { NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
+import { assert, getFilenameWithoutExtension, Named, RawSource } from "./util";
 import { GameInstance } from './game-engine-instance';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 import { GameConsoleView } from './console-react';
+import { GameSource } from './game-pure';
 
 export { Game } from './game-pure';
 
@@ -46,19 +47,19 @@ export { Game } from './game-pure';
 
 export class GameConsoleComponent {
 
-    private fileSources: NamedFileSource[] = [];
-    private initialFileSource?: NamedFileSource;
+    private fileSources: Named<GameSource>[] = [];
+    private initialFileSource?: Named<GameSource>;
 
     constructor(readonly divId: string, url?: string, readonly initiallySkipFirstScenes?: number) {
         if (url !== undefined) {
-            this.initialFileSource = { type: 'fetch', url, name: getFilenameWithoutExtension(url) };
+            this.initialFileSource = { type: 'xml', source: { type: 'fetch', url: url }, name: getFilenameWithoutExtension(url)};
         }
     }
 
     addUrl(url: string) {
         const name = getFilenameWithoutExtension(url);
 
-        this.fileSources.push({ type: 'fetch', url, name });
+        this.fileSources.push({ type: 'xml', source: { type: 'fetch', url}, name });
     }
 
     init() {
@@ -82,7 +83,7 @@ export class GameComponent {
     private instance: GameInstance;
 
     constructor(readonly divId: string, url: string) {
-        this.instance = new GameInstance({ type: 'fetch', url });
+        this.instance = new GameInstance({ type: 'xml', source: { type: 'fetch', url } });
     }
 
     init() {

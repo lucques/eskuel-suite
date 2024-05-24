@@ -3,11 +3,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button, Card, Form, FormCheck, ListGroup, ListGroupItem, Modal, ModalProps, Table } from "react-bootstrap";
 import { ColInfo, Schema, TableInfo } from "./schema";
 import { SqlValue } from "sql.js";
-import { FileSource, NamedFileSource, assert, getFilenameWithoutExtension } from "./util";
-import { Alarm, ArrowsAngleExpand, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
-import { GameDatabaseStatus } from "./game-pure";
+import { Named, RawSource, assert, getFilenameExtension, getFilenameWithoutExtension } from "./util";
+import { Alarm, ArrowsAngleExpand, FileEarmark, FileEarmarkPlus, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
+import { GameDatabaseStatus, GameSource } from "./game-pure";
+
+import filetypeDbUrl from './assets/filetype-db.svg';
 
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import { DbSource } from "./sql-js-api";
 
 ////////////
 // Widget //
@@ -53,6 +56,12 @@ export function MultiWidget({ className, title, children }: { className?: string
 export function SchemaView({schema}: {schema: Schema}) {
     return (
         <div className='schema'>
+            {
+                schema.length === 0 &&
+                <div>
+                    <p className={'text-center'}><em>(Keine Tabellen vorhanden)</em></p>
+                </div>
+            }
             <Table>
                 <tbody>
                     {
@@ -139,17 +148,19 @@ export function ResultTableView({result, className}: {result: initSqlJs.QueryExe
 // Clickable icons //
 /////////////////////
 
-type IconType = 'edit' | 'close' | 'open' | 'save' | 'add' | 'home' | 'file-sql' | 'file-xml' | 'expand';
+type IconType = 'edit' | 'close' | 'new' | 'open' | 'save' | 'add' | 'home' | 'file-sql' | 'file-db' | 'file-xml' | 'expand';
 
 export function Icon({type, size = 15}: {type: IconType, size?: number}) {
     return (
         type === 'edit'     ? <Pencil size={size} /> :
         type === 'close'    ? <X size={size} /> :
+        type === 'new'      ? <FileEarmarkPlus size={size} /> :
         type === 'open'     ? <Folder2Open size={size} /> :
         type === 'save'     ? <Save size={size} /> :
         type === 'add'      ? <PlusCircle size={size} /> :
         type === 'home'     ? <HouseDoor size={size} /> :
         type === 'file-sql' ? <FiletypeSql size={size} /> :
+        type === 'file-db'  ? <img src={filetypeDbUrl} alt="" width={size} height={size} /> :
         type === 'file-xml' ? <FiletypeXml size={size} /> :
         <ArrowsAngleExpand size={size} />
     );
@@ -311,15 +322,23 @@ export const EskuelModal: React.FC<ModalProps> = (props) => {
     return <Modal {...props} className={`eskuel ${props.className || ''}`.trim()} />;
 };
 
-type Selection =
-    { type: 'provided', fileSource: NamedFileSource } |
+type Selection<T> =
+    { type: 'provided', fileSource: Named<T> } |
     { type: 'uploaded-file' }
 
-export function OpenFileModal({ title, fileUploadTitle, fileIconType, fileAccept, providedFileSources, show, setShow, onOpenFile }: { title: string, fileUploadTitle: string, fileIconType: IconType, fileAccept: string, providedFileSources: NamedFileSource[], show: boolean, setShow: (show: boolean) => void, onOpenFile: (source: NamedFileSource) => void }) {
-
-    const [selection, setSelection] = useState<Selection | null>(null);
-    const [uploadedFileContent, setUploadedFileContent] = useState<{content: string, name: string} | null>(null);
-
+export function OpenFileModal<T>({ title, fileUploadTitle, fileIconTypes, fileAccept, show, setShow, providedFileSources, fileToSource, onOpenFile }: {
+    title: string,
+    fileUploadTitle: string,
+    fileIconTypes: IconType[],
+    fileAccept: string,
+    show: boolean,
+    setShow: (show: boolean) => void,
+    providedFileSources: Named<T>[],
+    fileToSource: (file: File) => Promise<T>,
+    onOpenFile: (source: Named<T>) => void
+}) {
+    const [selection, setSelection] = useState<Selection<T> | null>(null);
+    const [uploadedNamedSource, setUploadedNamedSource] = useState<Named<T> | null>(null);
 
     const onOpenClicked = () => {
         assert(selection !== null);
@@ -328,9 +347,9 @@ export function OpenFileModal({ title, fileUploadTitle, fileIconType, fileAccept
             onOpenFile(selection.fileSource);
         }
         else {
-            assert(uploadedFileContent !== null);
+            assert(uploadedNamedSource !== null);
 
-            onOpenFile({ type: 'inline', ...uploadedFileContent });
+            onOpenFile(uploadedNamedSource);
         }
 
         // Close the modal
@@ -341,14 +360,7 @@ export function OpenFileModal({ title, fileUploadTitle, fileIconType, fileAccept
         if (e.target.files && e.target.files.length > 0) {
             const uploadedFile = e.target.files[0];
             const name = getFilenameWithoutExtension(uploadedFile.name);
-            const fileReader = new FileReader();
-            fileReader.readAsText(uploadedFile, "UTF-8");
-            fileReader.onload = (f) => {
-                if (typeof f.target?.result === 'string') {
-                    // Assuming setFiles should be setFile
-                    setUploadedFileContent({ content: f.target.result, name});
-                }
-            };
+            fileToSource(uploadedFile).then(source => setUploadedNamedSource({ ...source, name }));
         }
     }
 
@@ -391,7 +403,11 @@ export function OpenFileModal({ title, fileUploadTitle, fileIconType, fileAccept
                                 </Form.Check>
                             </div>
                             <div className="open-file-radio-icon">
-                                <Icon type={fileIconType} size={40} />
+                                {
+                                    fileIconTypes.map((fileIconType, i) =>
+                                        <Icon key={i} type={fileIconType} size={40} />
+                                    )
+                                }
                             </div>
                         </ListGroupItem>
                     </ListGroup>
@@ -401,8 +417,127 @@ export function OpenFileModal({ title, fileUploadTitle, fileIconType, fileAccept
                 <Button variant="secondary" onClick={() => setShow(false)}>
                     Schließen
                 </Button>
-                <Button variant="primary" onClick={onOpenClicked} disabled={selection === null || (selection.type === 'uploaded-file' && uploadedFileContent === null)}>
+                <Button variant="primary" onClick={onOpenClicked} disabled={selection === null || (selection.type === 'uploaded-file' && uploadedNamedSource === null)}>
                     Laden
+                </Button>
+            </Modal.Footer>
+        </EskuelModal>
+    );
+}
+
+export function OpenDbFileModal({ show, setShow, providedFileSources, onOpenFile }: {
+    show: boolean,
+    setShow: (show: boolean) => void,
+    providedFileSources: Named<DbSource>[],
+    onOpenFile: (source: Named<DbSource>) => void
+}) {
+    return (
+        <OpenFileModal
+            title="Datenbank laden"
+            fileUploadTitle='Datenbankdatei hochladen'
+            fileIconTypes={['file-sql', 'file-db']}
+            fileAccept='.sql, .db, .db3, .sqlite, .sqlite3, .s3db, .sl3'
+            show={show}
+            setShow={setShow}
+            providedFileSources={providedFileSources}
+            fileToSource={function (file: File): Promise<DbSource> {
+                const fileReader = new FileReader();
+
+                return new Promise((resolve, reject) => {
+                    const fileExtension = getFilenameExtension(file.name);
+
+                    if (fileExtension === 'sql') {
+                        fileReader.onload = (f) => {
+                            assert(typeof f.target?.result === 'string');
+                            resolve({ type: 'initial-sql-script', source: { type: 'inline', content: f.target.result } });
+                        };
+                        fileReader.readAsText(file, "UTF-8");
+                    }
+                    else {
+                        fileReader.onload = (f) => {
+                            assert(f.target?.result instanceof ArrayBuffer);
+                            resolve({ type: 'sqlite-db', source: { type: 'inline', content: new Uint8Array(f.target.result) } });
+                        };
+                        fileReader.readAsArrayBuffer(file);
+                    }
+                });
+            } }
+            onOpenFile={onOpenFile} />
+    );
+}
+
+export function OpenGameFileModal({ show, setShow, providedFileSources, onOpenFile }: {
+    show: boolean,
+    setShow: (show: boolean) => void,
+    providedFileSources: Named<GameSource>[],
+    onOpenFile: (source: Named<GameSource>) => void
+}) {
+    return (
+        <OpenFileModal
+            title="Spiel laden"
+            fileUploadTitle='Spieldatei hochladen'
+            fileIconTypes={['file-xml']}
+            fileAccept='.xml'
+            show={show}
+            setShow={setShow}
+            providedFileSources={providedFileSources}
+            fileToSource={
+                function (file: File): Promise<GameSource> {
+                    const fileReader = new FileReader();
+
+                    return new Promise((resolve, reject) => {
+                        fileReader.onload = (f) => {
+                            assert(typeof f.target?.result === 'string');
+                            resolve({ type: 'xml', source: { type: 'inline', content: f.target.result } });
+                        };
+                        fileReader.readAsText(file, "UTF-8");
+                    });
+                }
+            }
+            onOpenFile={onOpenFile}
+        />
+    );
+}
+
+export function NewGameFileModal<T>({ show, setShow, onCreate }: {
+    show: boolean,
+    setShow: (show: boolean) => void,
+    onCreate: (name: string) => void
+}) {
+    const [filename, setFilename] = useState("Unbenannt");
+
+    const onCreateClicked = () => {
+        assert(filename !== '');
+
+        onCreate(filename);
+
+        // Close the modal
+        setShow(false);
+    }
+
+    return (
+        <EskuelModal className="new-modal" show={show} onHide={() => setShow(false)}>
+            <Modal.Header closeButton>
+                <Modal.Title>Neues Spiel</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Form>
+                    <div>
+                        <label htmlFor={'new-game-name'} className='mb-2'><strong>Name:</strong></label>
+                        <Form.Control
+                            id='new-game-name'
+                            type="text"
+                            value={filename}
+                            onChange={(e) => { setFilename(e.target.value); }} />
+                    </div>
+                </Form>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="secondary" onClick={() => setShow(false)}>
+                    Schließen
+                </Button>
+                <Button variant="primary" onClick={onCreateClicked} disabled={filename === ''}>
+                    Erstellen
                 </Button>
             </Modal.Footer>
         </EskuelModal>

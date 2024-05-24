@@ -14,6 +14,8 @@
 </head>
 <body>
     <script>
+        let theDb = null;
+
         document.addEventListener('DOMContentLoaded', function () {       
 
             const b = new eskuelSuite.MultiBrowserComponent('browser');
@@ -24,6 +26,7 @@
             b.addUrl('./res/dbs/eisdiele.sql');
             b.addUrl('./res/dbs/obst-gemuese.sql');
             b.addUrl('./res/dbs/cafe.sql');
+            b.addUrl('./res/dbs/cafe-sqlite.db');
             b.addUrl('./res/dbs/pizzeria-mit-redundanz.sql');
             b.addUrl('./res/games/baufirma/baufirma.sql');
             b.addUrl('./res/games/island/island.sql');

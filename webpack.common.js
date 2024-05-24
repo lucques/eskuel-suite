@@ -30,7 +30,12 @@ module.exports = {
       {
 				test: /\.ttf$/,
 				type: 'asset/resource'
-			}
+			},
+      // This rule ensures that .svg files are processed as file assets
+      {
+        test: /\.svg$/,
+        type: 'asset/resource', // or 'file-loader' if you're using file-loader
+      },
     ],
   },
   plugins: [

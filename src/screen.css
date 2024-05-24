@@ -213,6 +213,7 @@
     display: inline-flex;
     flex-direction: column;
     justify-content: space-between;
+    row-gap: 10px;
 
     font-size: 140%;
 }
@@ -220,6 +221,11 @@
 .eskuel .widget-scene button {
     margin-bottom: 5px;
     font-size: 120%;
+}
+
+.eskuel .widget-scene img {
+    max-width: 100%;
+    max-height: 100%;
 }
 
 /* Results widget */
@@ -269,6 +275,8 @@
 }
 
 .eskuel .modal-body .open-file-radio-icon {
+    display: flex;
+    column-gap: 10px;
     padding: 20px 10px 20px 30px;
 }
 
