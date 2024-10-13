@@ -1,35 +1,17 @@
-import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, FetchXMLFail, GameSource } from './game-pure';
-import { FetchDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, RawSource, Success, assert, generateId } from './util';
+import { Game, LoadGameFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, FetchXMLFail, GameSource, GameInitStatus } from './game-pure';
+import { FetchDbFail, InitDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
+import { Fail, Source, Success, assert, generateId } from './util';
 import { Schema } from './schema';
+import { LoadingStatus } from './react';
 
 
 // Terminology:
-// - "status"
-//   - held in field `status`
-//   - describes the life cycle of the game and only gets set in the beginning of the game
-//   - affected by initial loading of the fields `game`, `userDb`, `referenceDb`.
-//     The status can be depicted by a simple state machine, starting with "pending".
-//     Transitions are reflexive and monotone (= once active, always active; once failed, always failed).
-//     - "pending" -- game_ok--> "pending"
-//     - "active"  -- game_ok--> "active"
-//     - "pending" --!game_ok--> "failed"
-//     - "failed"  --!game_ok--> "failed"
-//     - "pending" -----db_ok--> "active"
-//     - "active"  -----db_ok--> "active"
-//     - "pending" ----!db_ok--> "failed"
-//     - "failed"  ----!db_ok--> "failed"
 // - "game state"
 //    - consists of an object of type `GameState`
 // - "internal game state"
 //    - consists of the following three fields: `userDb`, `refDb`, `gameState`
 //    - needs to be kept in sync
 //    - manipulation is therefore encapsulated in last section of the `GameInstance` class
-
-export type StatusPending    = { kind: 'pending' } // Fields have been requested to activate, but request may be unresolved
-export type StatusActive     = { kind: 'active'  } // Fields have been requested to activate and done so successfully
-export type StatusFailed     = { kind: 'failed', error: XMLFail | RunInitScriptFail } // Fields have been requested to activate and failed to do so
-export type Status = StatusPending | StatusActive | StatusFailed
 
 type InternalState = {
     userDb:    StaticDb,
@@ -44,15 +26,15 @@ export class GameInstance {
 
     readonly id: string;
     
-    private game:        Promise<Success<Game>      | Fail<XMLFail>>;
+    private game:        Promise<Success<Game>      | Fail<LoadGameFail>>;
 
     // Internal state
-    private internalState: Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>>;
+    private internalState: Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>>;
     
-    private status: Status = { kind: 'pending' };
+    private status: GameInitStatus = { kind: 'pending' };
     
     // Not part of `status`.
-    private schema:      Promise<Success<Schema>    | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>;
+    private schema:      Promise<Success<Schema>    | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>>;
 
     constructor(source: GameSource, initiallySkipFirstScenes?: number) {
         this.id = 'game-instance-' + generateId();
@@ -77,7 +59,7 @@ export class GameInstance {
                 })
                 : Promise.resolve({ ok: true, data: rawSource.content });
             this.game = gameSourceContent
-                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
+                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<LoadGameFail> => {
                     if (!textRes.ok) {
                         return { ok: false, error: textRes.error };
                     }
@@ -107,13 +89,13 @@ export class GameInstance {
         // Skip?
         if (initiallySkipFirstScenes !== undefined) {
             this.internalState = this.internalState.then(
-                (internalStateRes: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> => {
+                (internalStateRes: Success<InternalState> | Fail<LoadGameFail | InitDbFail>): Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>> => {
                     if (!internalStateRes.ok) {
                         return Promise.resolve({ ok: false, error: internalStateRes.error });
                     }
 
                     return this.game.then(
-                        (gameRes: Success<Game>| Fail<XMLFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> => {
+                        (gameRes: Success<Game>| Fail<LoadGameFail>): Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>> => {
                             if (!gameRes.ok) {
                                 return Promise.resolve({ ok: false, error: gameRes.error });
                             }
@@ -139,16 +121,13 @@ export class GameInstance {
                         return { ok: true, data: schema.data };
                     }
                     else {
-                        // Assertion holds because there is no SQL file to fetch and the init script has already been run
-                        assert(schema.error.kind === 'parse-schema');
-
                         return { ok: false, error: schema.error };
                     };
                 });
             });
     }
 
-    getStatus(): Status {
+    getStatus(): GameInitStatus {
         return this.status;
     }
 
@@ -161,7 +140,7 @@ export class GameInstance {
      * Technically, no value really is requested.
      * The effect of this operation is though that the status is "active" or "failed"
      */
-    async resolve(): Promise<Success<void> | Fail<XMLFail | RunInitScriptFail>> {
+    async resolve(): Promise<Success<void> | Fail<LoadGameFail | InitDbFail>> {
         return this.internalState.then(
             res => {
                 if (!res.ok) {
@@ -174,11 +153,11 @@ export class GameInstance {
         );
     }
 
-    async getGame(): Promise<Success<Game> | Fail<XMLFail>> {
+    async getGame(): Promise<Success<Game> | Fail<LoadGameFail>> {
         return this.game;
     }
 
-    async getGameState(): Promise<Success<GameState> | Fail<XMLFail | RunInitScriptFail>> {
+    async getGameState(): Promise<Success<GameState> | Fail<LoadGameFail | InitDbFail>> {
         const internalStateRes = await this.internalState;
 
         if (!internalStateRes.ok) {
@@ -188,7 +167,7 @@ export class GameInstance {
         return { ok: true, data: internalStateRes.data.gameState };
     }
 
-    async getSchema(): Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>> {
+    async getSchema(): Promise<Success<Schema> | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>> {
         return this.schema;
     }
 
@@ -411,10 +390,10 @@ export class GameInstance {
         }
     }
 
-    async onSkipMultipleScenesPure(game: Game, n: number, internalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+    async onSkipMultipleScenesPure(game: Game, n: number, internalState: Success<InternalState> | Fail<LoadGameFail | InitDbFail>): Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>> {
         assert(internalState.ok, 'Illegal state');
 
-        let curInternalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail> = internalState;
+        let curInternalState: Success<InternalState> | Fail<LoadGameFail | InitDbFail> = internalState;
 
         for (let i = 0; i < n; i++) {
             curInternalState = await this.advanceScenePure(game, curInternalState);
@@ -432,7 +411,7 @@ export class GameInstance {
     // At the end of every async operation, this function must be called:
     // - `updateStatus` transitions status to "active"/"failed" when the operation is resolved
 
-    private async updateStatusAfterGameResult<T>(gameRes: Success<T> | Fail<XMLFail>): Promise<Success<T> | Fail<XMLFail>> {
+    private async updateStatusAfterGameResult<T>(gameRes: Success<T> | Fail<LoadGameFail>): Promise<Success<T> | Fail<LoadGameFail>> {
         // "pending" --game_ok--> "pending"
         // "active"  --game_ok--> "active"
         if ((this.status.kind === 'pending' || this.status.kind === 'active') && gameRes.ok) {
@@ -450,7 +429,7 @@ export class GameInstance {
         return gameRes;
     }
 
-    private async updateStatusAfterInternalStateInit<T>(res: Success<T> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<T> | Fail<XMLFail | RunInitScriptFail>> {
+    private async updateStatusAfterInternalStateInit<T>(res: Success<T> | Fail<LoadGameFail | InitDbFail>): Promise<Success<T> | Fail<LoadGameFail | InitDbFail>> {
         // "pending" --db_ok--> "active"
         // "active"  --db_ok--> "active"
         if ((this.status.kind === 'pending' || this.status.kind === 'active') && res.ok) {
@@ -577,7 +556,7 @@ export class GameInstance {
         this.internalState = Promise.resolve({ok: true, data: internalState});
     }
 
-    private async advanceScenePure(game: Game, internalState: Success<InternalState> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+    private async advanceScenePure(game: Game, internalState: Success<InternalState> | Fail<LoadGameFail | InitDbFail>): Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>> {
         assert(internalState.ok, 'Illegal state');
         let curState = internalState.data.gameState;
 
@@ -635,10 +614,10 @@ export class GameInstance {
     // The following functions `resetInternalState` and `createFreshInternalState` are only split because `resetInternalState` cannot be used in constructor (limitation of TS's type system).
     private resetInternalState() {
         this.internalState = this.createFreshInternalState();
-
     }
 
-    private async createFreshInternalState(): Promise<Success<InternalState> | Fail<XMLFail | RunInitScriptFail>> {
+    private async createFreshInternalState(): Promise<Success<InternalState> | Fail<LoadGameFail | InitDbFail>> {
+        // Resolve `game`
         const gameRes = await this.game;
 
         if (!gameRes.ok) {
@@ -650,6 +629,22 @@ export class GameInstance {
         const userDb = new StaticDb(gameRes.data.dbData);
         const refDb = new StaticDb(gameRes.data.dbData);
 
+        // Resolve `userDb`
+        const userDbRes = await userDb.resolve();
+
+        if (!userDbRes.ok) {
+            return Promise.resolve({ ok: false, error: userDbRes.error });
+        }
+
+        // Resolve `refDb`
+        const refDbRes = await refDb.resolve();
+
+        if (!refDbRes.ok) {
+            return Promise.resolve({ ok: false, error: refDbRes.error });
+        }
+
+
+        // Success
         return Promise.resolve({
             ok: true,
             data: {

@@ -1,6 +1,6 @@
-import { Game, XMLFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, ParseXMLFail, Scene, FetchXMLFail, GameSource } from './game-pure';
-import { DbData, DbSource, FetchDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, FetchFail, RawSource, Success, assert, generateId, materializeBinarySource, materializeTextSource } from './util';
+import { Game, LoadGameFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, ParseXMLFail, Scene, FetchXMLFail, GameSource } from './game-pure';
+import { DbData, DbSource, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
+import { Fail, FetchFail, Source, Success, assert, generateId, materializeBinarySource, materializeTextSource } from './util';
 import { Schema } from './schema';
 
 
@@ -22,7 +22,7 @@ import { Schema } from './schema';
 
 export type StatusPending    = { kind: 'pending' } // Fields have been requested to activate, but request may be unresolved
 export type StatusActive     = { kind: 'active'  } // Fields have been requested to activate and done so successfully
-export type StatusFailed     = { kind: 'failed', error: XMLFail } // Fields have been requested to activate and failed to do so
+export type StatusFailed     = { kind: 'failed', error: LoadGameFail } // Fields have been requested to activate and failed to do so
 export type Status = StatusPending | StatusActive | StatusFailed
 
 export class EditorInstance {
@@ -31,13 +31,13 @@ export class EditorInstance {
 
     private name:   string;
 
-    private game:   Promise<Success<Game>      | Fail<XMLFail>>;
-    private db:     Promise<Success<StaticDb>  | Fail<XMLFail | RunInitScriptFail>>;
+    private game:   Promise<Success<Game>      | Fail<LoadGameFail>>;
+    private db:     Promise<Success<StaticDb>  | Fail<LoadGameFail | InitDbFail>>;
     
     private status: Status = { kind: 'pending' };
     
     // Not part of `status`.
-    private schema:      Promise<Success<Schema>    | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>;
+    private schema:      Promise<Success<Schema>    | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>>;
 
     constructor(name: string, source: GameSource) {
         this.id = 'editor-instance-' + generateId();
@@ -66,7 +66,7 @@ export class EditorInstance {
                 );
 
             this.game = sourceContent
-                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<XMLFail> => {
+                .then((textRes: Success<string> | Fail<FetchXMLFail>): Success<Game> | Fail<LoadGameFail> => {
                     if (!textRes.ok) {
                         return { ok: false, error: textRes.error };
                     }
@@ -119,7 +119,7 @@ export class EditorInstance {
      * Technically, no value really is requested.
      * The effect of this operation is though that the status is "active" or "failed"
      */
-    async resolve(): Promise<Success<void> | Fail<XMLFail>> {
+    async resolve(): Promise<Success<void> | Fail<LoadGameFail>> {
         return this.game.then(
             res => {
                 if (!res.ok) {
@@ -132,11 +132,11 @@ export class EditorInstance {
         );
     }
 
-    async getGame(): Promise<Success<Game> | Fail<XMLFail>> {
+    async getGame(): Promise<Success<Game> | Fail<LoadGameFail>> {
         return this.game;
     }
 
-    async getSchema(): Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>> {
+    async getSchema(): Promise<Success<Schema> | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>> {
         return this.schema;
     }
 
@@ -271,7 +271,7 @@ export class EditorInstance {
     // At the end of every async operation, this function must be called:
     // - `updateStatus` transitions status to "active"/"failed" when the operation is resolved
 
-    private async updateStatusAfterGameResult<T>(gameRes: Success<T> | Fail<XMLFail>): Promise<Success<T> | Fail<XMLFail>> {
+    private async updateStatusAfterGameResult<T>(gameRes: Success<T> | Fail<LoadGameFail>): Promise<Success<T> | Fail<LoadGameFail>> {
         // "pending" --game_ok--> "active"
         // "active"  --game_ok--> "active"
         if ((this.status.kind === 'pending' || this.status.kind === 'active') && gameRes.ok) {
@@ -302,12 +302,12 @@ export class EditorInstance {
         this.schema      = initValues.schema;
     }
 
-    private createFreshDbAndSchema(): { db: Promise<Success<StaticDb>   | Fail<XMLFail | RunInitScriptFail>>,
-                                        schema: Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>>}
+    private createFreshDbAndSchema(): { db: Promise<Success<StaticDb> | Fail<LoadGameFail | InitDbFail>>,
+                                        schema: Promise<Success<Schema> | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>>}
     {
         // `db`: Reset
         const db = this.game
-            .then((gameRes: Success<Game> | Fail<XMLFail | RunInitScriptFail>): Success<StaticDb> | Fail<XMLFail | RunInitScriptFail> => {
+            .then((gameRes: Success<Game> | Fail<LoadGameFail>): Success<StaticDb> | Fail<LoadGameFail> => {
                 if (gameRes.ok) {
                     return { ok: true, data: new StaticDb(gameRes.data.dbData) };
                 }
@@ -315,12 +315,12 @@ export class EditorInstance {
                     return gameRes;
                 }
             })
-            .then((dbRes: Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> => {
+            .then((dbRes: Success<StaticDb> | Fail<LoadGameFail>): Promise<Success<StaticDb> | Fail<LoadGameFail | InitDbFail>> => {
                 if (!dbRes.ok) {
-                    return Promise.resolve(dbRes)
+                    return Promise.resolve(dbRes);
                 }
                 else {
-                    const res: Promise<Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>> =
+                    const res: Promise<Success<StaticDb> | Fail<LoadGameFail | InitDbFail>> =
                         dbRes.data.resolve().then(
                             ()      => { return Promise.resolve(dbRes); },
                             (error: RunInitScriptFail | FetchDbFail) => {
@@ -337,15 +337,13 @@ export class EditorInstance {
             });
 
         const schema = db
-            .then((db: Success<StaticDb> | Fail<XMLFail | RunInitScriptFail>): Promise<Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail>> => {
+            .then((db: Success<StaticDb> | Fail<LoadGameFail | InitDbFail>): Promise<Success<Schema> | Fail<LoadGameFail | InitDbFail | ParseSchemaFail>> => {
                 if (db.ok) {
-                    return db.data.querySchema().then((schema: Success<Schema> | Fail<FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>): Success<Schema> | Fail<XMLFail | RunInitScriptFail | ParseSchemaFail> => {
+                    return db.data.querySchema().then((schema: Success<Schema> | Fail<InitDbFail | ParseSchemaFail>): Success<Schema> | Fail<LoadGameFail | InitDbFail | ParseSchemaFail> => {
                         if (schema.ok) {
                             return { ok: true, data: schema.data };
                         }
                         else {
-                            // Assertion holds because there is no SQL file to fetch
-                            assert(schema.error.kind === 'run-init-script' || schema.error.kind === 'parse-schema');
                             return { ok: false, error: schema.error };
                         };
                     });

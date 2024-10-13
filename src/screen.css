@@ -135,16 +135,10 @@
     width:120px;
 }
 
-.eskuel .editable-scenes-container > div {
+.eskuel .editable-scenes-container > div:first-child { /* Droppable-container */
     display: flex;
     flex-direction: column;
     row-gap: 10px;
-}
-
-.eskuel .editable-scenes-container .widget-editable-scenes-body > div {
-    display: flex;
-    flex-direction: column;
-    row-gap: 20px;
 }
 
 .eskuel .editable-scenes-container .editable-scene-view-header p {
@@ -158,22 +152,10 @@
     row-gap: 10px;
 }
 
-.eskuel .widget-initscript-load {
-    margin-top:10px;
-    margin-bottom:10px;
-}
-
-.eskuel .game-database-status-short-view {
-    flex: 1 0 auto;
-
-    margin-bottom: 0;
-    padding-top:6px;
-    padding-bottom:6px;
-}
-
 .eskuel .add-scene-button {
+    display: flex;
+    justify-content: center;
     margin-top: 20px;
-    text-align: center;    
 }
 
 
@@ -256,7 +238,7 @@
 /* Modals */
 /**********/
 
-.eskuel .modal-body form {
+.eskuel .modal-body .form-container {
     display: flex;
     flex-direction: column;
     row-gap: 20px;
@@ -284,6 +266,10 @@
 /*****************/
 /* Editor Modals */
 /*****************/
+
+.eskuel .choose-scene-type > label {
+    display: block;
+}
 
 .eskuel .edit-scene-options {
     display: grid;
@@ -407,6 +393,24 @@
 
 .eskuel .row-gap-default {
     row-gap: 10px;
+}
+
+
+/**********************/
+/* Open and load file */
+/**********************/
+
+/* .eskuel .load {
+    margin-top:10px;
+    margin-bottom:10px;
+} */
+
+.eskuel .load-source-panel-status {
+    flex: 1 0 auto;
+
+    margin-bottom: 0;
+    padding-top:6px;
+    padding-bottom:6px;
 }
 
 

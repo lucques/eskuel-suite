@@ -1,9 +1,10 @@
 import _ from 'lodash';
-import { Fail, RawSource, Success, assert, decodeFromBase64, encodeToBase64, isFail, isSuccess } from './util';
-import { DbData, FetchDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
+import { Fail, Source, Success, assert, decodeFromBase64, encodeToBase64, isFail, isSuccess } from './util';
+import { DbData, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
 import { Schema } from './schema';
 
 import * as he from 'he';
+import { LoadingStatus } from './react';
 const heOptions = {
     // useNamedReferences: true,
     // allowUnsafeSymbols: false
@@ -15,7 +16,7 @@ const heOptions = {
 /////////////////////////////////
 
 export type GameSource = { type: 'object', source: Game } |
-                         { type: 'xml',    source: RawSource<string> }
+                         { type: 'xml',    source: Source<string> }
 
 
 //////////////////////////////////
@@ -24,7 +25,7 @@ export type GameSource = { type: 'object', source: Game } |
 
 export type FetchXMLFail = { kind: 'fetch-xml', url: string }
 export type ParseXMLFail = { kind: 'parse-xml', details: string }
-export type XMLFail = FetchXMLFail | ParseXMLFail;
+export type LoadGameFail = FetchXMLFail | ParseXMLFail;
 
 
 ////////////////////////////////
@@ -36,10 +37,17 @@ export type SchemaStatusLoaded  = { kind: 'loaded', data: Schema };
 export type SchemaStatusFailed  = { kind: 'failed', error: ParseSchemaFail };
 export type SchemaStatus        = SchemaStatusPending | SchemaStatusLoaded | SchemaStatusFailed;
 
-export type GameDatabaseStatusPending = { kind: 'pending' };
-export type GameDatabaseStatusLoaded  = { kind: 'loaded', data: Schema };
-export type GameDatabaseStatusFailed  = { kind: 'failed', error: FetchDbFail | RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail };
-export type GameDatabaseStatus = GameDatabaseStatusPending | GameDatabaseStatusLoaded | GameDatabaseStatusFailed;
+export function schemaStatusToLoadingStatus(status: SchemaStatus): LoadingStatus {
+    if (status.kind === 'pending') {
+        return { kind: 'pending' };
+    }
+    else if (status.kind === 'failed') {
+        return { kind: 'failed', error: 'Fehler beim Parsen des Datenbankschemas: ' + status.error.details };
+    }
+    else {
+        return { kind: 'loaded' };
+    }
+}
 
 
 /////////////////////
@@ -51,7 +59,7 @@ export class Game {
         readonly title: string,
         readonly teaser: string,
         readonly copyright: string,
-        readonly dbData: DbData,
+        readonly dbData: DbData | null,
         readonly scenes: Scene[])
     {
         assert(scenes.length > 0, 'There must be at least one scene');
@@ -195,15 +203,12 @@ export function xmlToGame(xml: XMLDocument): Success<Game> | Fail<ParseXMLFail> 
     // Db data
 
     // Initial SQL script
-    let dbData: DbData;
+    let dbData: DbData | null = null;
 
     const initialSqlScriptNode = xml.querySelector('initial-sql-script');
     if (initialSqlScriptNode === null) {
         const sqliteDbNode = xml.querySelector('sqlite-db');
-        if (sqliteDbNode === null) {
-            return { ok: false, error: { kind: 'parse-xml', details: '<initial-sql-script>...</initial-sql-script> as well as <sqlite-db>...</sqlite-db> are missing' } };
-        }
-        else {
+        if (sqliteDbNode != null) {
             const base64string = sqliteDbNode.textContent?.trim();
             if (base64string === undefined) {
                 return { ok: false, error: { kind: 'parse-xml', details: 'base64string is missing' } };
@@ -353,9 +358,12 @@ export function gameToXML(g: Game): string {
         }
     }).join("\n");
 
-    const dbData = g.dbData.type === 'initial-sql-script' ?
-        `<initial-sql-script>${he.encode(g.dbData.sql, heOptions)}</initial-sql-script>`
-        : `<sqlite-db>${he.encode(encodeToBase64(g.dbData.data), heOptions)}</sqlite-db>`;
+    const dbData =
+        g.dbData === null
+        ? ''
+        : (g.dbData.type === 'initial-sql-script'
+            ? `<initial-sql-script>${he.encode(g.dbData.sql, heOptions)}</initial-sql-script>`
+            : `<sqlite-db>${he.encode(encodeToBase64(g.dbData.data), heOptions)}</sqlite-db>`);
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <game>
     <head>
@@ -501,7 +509,7 @@ export function createBlankGame(name: string) {
         name,
         'Hier Teaser einfügen',
         '© Hier Copyright einfügen',
-        { type: 'initial-sql-script', sql: `` },
+        null,
         [
             {
                 type: 'text',
@@ -509,4 +517,50 @@ export function createBlankGame(name: string) {
             }
         ]
     );
+}
+
+
+//////////////////////
+// Game init status //
+//////////////////////
+
+// "status"
+// - held in field `status`
+// - describes the life cycle of the game and only gets set in the beginning of the game
+// - affected by initial loading of the fields `game`, `userDb`, `referenceDb`.
+//   The status can be depicted by a simple state machine, starting with "pending".
+//   Transitions are reflexive and monotone (= once active, always active; once failed, always failed).
+//   - "pending" -- game_ok--> "pending"
+//   - "active"  -- game_ok--> "active"
+//   - "pending" --!game_ok--> "failed"
+//   - "failed"  --!game_ok--> "failed"
+//   - "pending" -----db_ok--> "active"
+//   - "active"  -----db_ok--> "active"
+//   - "pending" ----!db_ok--> "failed"
+//   - "failed"  ----!db_ok--> "failed"
+
+export type GameInitStatusPending    = { kind: 'pending' } // Fields have been requested to activate, but request may be unresolved
+export type GameInitStatusActive     = { kind: 'active'  } // Fields have been requested to activate and done so successfully
+export type GameInitStatusFailed     = { kind: 'failed', error: LoadGameFail | InitDbFail } // Fields have been requested to activate and failed to do so
+export type GameInitStatus = GameInitStatusPending | GameInitStatusActive | GameInitStatusFailed
+
+export function gameInitStatusToLoadingStatus(status: GameInitStatus): LoadingStatus {
+    if (status.kind === 'pending') {
+        return { kind: 'pending' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'fetch-xml') {
+        return { kind: 'failed', error: 'Fehler beim Laden der Spieldatei ' + status.error.url };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'parse-xml') {
+        return { kind: 'failed', error: 'Fehler beim Parsen der Spieldatei (XML-Format): ' + status.error.details };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'run-init-script') {
+        return { kind: 'failed', error: 'Fehler beim Ausführen des Initialisierungs-Skripts: ' + status.error.details };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'read-sqlite-db') {
+        return { kind: 'failed', error: 'Fehler beim Lesen der SQLite-Datenbank: ' + status.error.details };
+    }
+    else {
+        return { kind: 'loaded' };
+    }
 }

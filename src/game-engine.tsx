@@ -31,7 +31,7 @@ import './screen.css';
 
 import { StaticDb, RunInitScriptFail, FetchDbFail } from "./sql-js-api";
 import { ColInfo, TableInfo } from './schema';
-import { assert, getFilenameWithoutExtension, Named, RawSource } from "./util";
+import { assert, getFilenameWithoutExtension, Named, Source } from "./util";
 import { GameInstance } from './game-engine-instance';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 import { GameConsoleView } from './console-react';

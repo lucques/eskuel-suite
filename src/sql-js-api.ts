@@ -5,7 +5,7 @@ declare const sqlJs: Promise<initSqlJs.SqlJsStatic>;
 
 
 // Local
-import { Fail, RawSource, getFilenameExtension, getFilenameWithoutExtension, Success, Named, assert } from './util';
+import { Fail, Source, getFilenameExtension, getFilenameWithoutExtension, Success, Named, assert } from './util';
 import { Schema, TableInfo, extractTableInfo } from './schema';
 
 
@@ -13,14 +13,17 @@ import { Schema, TableInfo, extractTableInfo } from './schema';
 // Interface for statically loaded dbs //
 /////////////////////////////////////////
 
-export type DbSource = { type: 'initial-sql-script', source: RawSource<string> } |
-                       { type: 'sqlite-db',          source: RawSource<Uint8Array> }
+export type DbSource = { type: 'initial-sql-script', source: Source<string> } |
+                       { type: 'sqlite-db',          source: Source<Uint8Array> }
 export type DbData = { type: 'initial-sql-script', sql:  string } |
                      { type: 'sqlite-db',          data: Uint8Array }
 
 export type FetchDbFail       = { kind: 'fetch-db', url: string }
+
 export type RunInitScriptFail = { kind: 'run-init-script', details: string }
 export type ReadSqliteDbFail  = { kind: 'read-sqlite-db', details: string }
+export type InitDbFail        = RunInitScriptFail | ReadSqliteDbFail
+
 export type ParseSchemaFail   = { kind: 'parse-schema', details: string };
 
 
@@ -29,32 +32,74 @@ export type ParseSchemaFail   = { kind: 'parse-schema', details: string };
  * - "resolved" means that the `db` promise is resolved
  */
 export class StaticDb {
-    private db: Promise<Success<initSqlJs.Database> | Fail<RunInitScriptFail | ReadSqliteDbFail>> | null = null;
+    private db: Promise<Success<initSqlJs.Database> | Fail<InitDbFail>>;
 
-    constructor(readonly source: DbData) { }
+    constructor(readonly source: DbData | null) {
+        this.db = sqlJs.then(SQL => {
+            if (this.source === null) {
+                const db = new SQL.Database();
 
-    async exec(sql: string): Promise<Success<SqlResult> | Fail<RunInitScriptFail | ReadSqliteDbFail>> {
-        // Forward potential failure
-        const dbRes = await this.getDb();
-        if (!dbRes.ok) {
-            return dbRes;
-        }
-        const db = dbRes.data;
+                // Success: Empty db
+                return { ok: true, data: db };
+            }
+            else if (this.source.type === 'initial-sql-script') {
+                const db = new SQL.Database();
+                try {
+                    db.run(this.source.sql);
+                    
+                    // Success: Initial SQL script succeeded
+                    return { ok: true, data: db };
+                }
+                catch (e) {
+                    // Failure: Initial SQL script failed
+                    return { ok: false, error: { kind: 'run-init-script', details: String(e) } };
+                }
+            }
+            else {
+                try {
+                    const db = new SQL.Database(this.source.data);
 
-        // Query db
-        let result: SqlResult;
-        try {
-            const results = db.exec(sql);
-            result = { type: 'succ', timestamp: new Date(), sql, result: results };
-        }
-        catch (e: any) {
-            result = { type: 'error', timestamp: new Date(), sql, message: e.toString() };
-        }
+                    // We need to manually check whether the db actually works
+                    const res = db.exec(`SELECT name FROM sqlite_master WHERE type='table'`);
 
-        return { ok: true, data: result };
+                    if (res.length !== 1) {
+                        return { ok: false, error: { kind: 'read-sqlite-db', details: 'Could not read from db' } };
+                    }
+    
+                    // Success: SQLite db read succeeded
+                    return { ok: true, data: db };
+                }
+                catch (e) {
+                    // Failure: SQLite db read failed
+                    return { ok: false, error: { kind: 'read-sqlite-db', details: String(e) } };
+                }
+            }
+        });
     }
 
-    async querySchema(): Promise<Success<Schema> | Fail<RunInitScriptFail | ReadSqliteDbFail | ParseSchemaFail>> {
+    async exec(sql: string): Promise<Success<SqlResult> | Fail<InitDbFail>> {
+        // Forward potential failure
+        return this.db.then((dbRes) => {
+            if (!dbRes.ok) {
+                return dbRes;
+            }
+            const db = dbRes.data;
+
+            // Query db
+            let result: SqlResult;
+            try {
+                const results = db.exec(sql);
+                result = { type: 'succ', timestamp: new Date(), sql, result: results };
+            }
+            catch (e: any) {
+                result = { type: 'error', timestamp: new Date(), sql, message: e.toString() };
+            }
+
+            return { ok: true, data: result };
+        });
+    }
+
+    async querySchema(): Promise<Success<Schema> | Fail<InitDbFail | ParseSchemaFail>> {
         const resultsRes = await this.exec('SELECT sql FROM sqlite_schema WHERE type=\'table\'');
         // Forward potential failure
         if (!resultsRes.ok) {
@@ -103,58 +148,16 @@ export class StaticDb {
     /////////////////////////
     // Explicit resolution //
     /////////////////////////
-    
-    triggerResolve(): void {
-        this.getDb();
-    }
 
-    async resolve(): Promise<Success<void> | Fail<RunInitScriptFail | ReadSqliteDbFail>> {
-        const res = await this.getDb();
-        if (res.ok) {
-            return { ok: true, data: undefined };
-        }
-        else {
-            return res;
-        }
-    }
-
-
-    /////////////
-    // Private //
-    /////////////
-
-    private async getDb(): Promise<Success<initSqlJs.Database> | Fail<RunInitScriptFail | ReadSqliteDbFail>> {
-        if (this.db === null) {                       
-            const SQL = await sqlJs;
-            
-            if (this.source.type === 'initial-sql-script') {
-                const db = new SQL.Database();
-                try {
-                    db.run(this.source.sql);
-                    
-                    // Success: Initial SQL script succeeded
-                    this.db = Promise.resolve({ ok: true, data: db });
-                }
-                catch (e) {
-                    // Failure: Initial SQL script failed
-                    this.db = Promise.resolve({ ok: false, error: { kind: 'run-init-script', details: String(e) } });
-                }
+    async resolve(): Promise<Success<void> | Fail<InitDbFail>> {
+        return this.db.then((res) => {
+            if (res.ok) {
+                return { ok: true, data: undefined };
             }
             else {
-                try {
-                    const db = new SQL.Database(this.source.data);
-
-                    // Success: SQLite db read succeeded
-                    this.db = Promise.resolve({ ok: true, data: db });
-                }
-                catch (e) {
-                    // Failure: SQLite db read failed
-                    this.db = Promise.resolve({ ok: false, error: { kind: 'read-sqlite-db', details: String(e) } });
-                }
+                return res;
             }
-        }
-        return this.db;
-        
+        });
     }
 }
 
@@ -169,9 +172,6 @@ export function makeNamedDbSource(url: string): Named<DbSource> {
         return { type: 'sqlite-db', source: { type: 'fetch', url }, name };
     }
 }
-
-// export function materializeDbSource(source: DbSource): Promise<Success<DbData> | Fail<FetchFail>> {
-
 
 
 //////////////////////

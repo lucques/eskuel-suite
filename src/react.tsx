@@ -1,11 +1,11 @@
 import classNames from "classnames";
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Card, Form, FormCheck, ListGroup, ListGroupItem, Modal, ModalProps, Table } from "react-bootstrap";
+import { Alert, Button, Card, Form, FormCheck, ListGroup, ListGroupItem, Modal, ModalProps, OverlayTrigger, Table, Tooltip, TooltipProps } from "react-bootstrap";
 import { ColInfo, Schema, TableInfo } from "./schema";
 import { SqlValue } from "sql.js";
-import { Named, RawSource, assert, getFilenameExtension, getFilenameWithoutExtension } from "./util";
-import { Alarm, ArrowsAngleExpand, FileEarmark, FileEarmarkPlus, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
-import { GameDatabaseStatus, GameSource } from "./game-pure";
+import { FetchFail, ImageSource, Named, Source, assert, getFilenameExtension, getFilenameWithoutExtension } from "./util";
+import { Alarm, ArrowsAngleExpand, FileEarmark, FileEarmarkPlus, FiletypePng, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
+import { GameSource } from "./game-pure";
 
 import filetypeDbUrl from './assets/filetype-db.svg';
 
@@ -136,9 +136,21 @@ export function ResultTableView({result, className}: {result: initSqlJs.QueryExe
                     </tr>
                 </thead>
                 <tbody>
-                    {result.values.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{renderCell(cell)}</td>)}</tr>)}
+                    {result.values.slice(0, 50).map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{renderCell(cell)}</td>)}</tr>)}
                 </tbody>
+                {
+                    result.values.length > 50 &&
+                    <thead>
+                        <tr>
+                            {result.columns.map((col, i) => <td key={i}>...</td>)}
+                        </tr>
+                    </thead>
+                }
             </Table>
+            {
+                result.values.length > 50 &&
+                <div className="text-center"><em>(Ergebnis wurde nach 50 Zeilen abgeschnitten)</em></div>
+            }
         </ListGroup.Item>
     );
 }
@@ -148,7 +160,7 @@ export function ResultTableView({result, className}: {result: initSqlJs.QueryExe
 // Clickable icons //
 /////////////////////
 
-type IconType = 'edit' | 'close' | 'new' | 'open' | 'save' | 'add' | 'home' | 'file-sql' | 'file-db' | 'file-xml' | 'expand';
+type IconType = 'edit' | 'close' | 'new' | 'open' | 'save' | 'add' | 'home' | 'file-sql' | 'file-db' | 'file-xml' | 'file-png' | 'expand';
 
 export function Icon({type, size = 15}: {type: IconType, size?: number}) {
     return (
@@ -162,38 +174,90 @@ export function Icon({type, size = 15}: {type: IconType, size?: number}) {
         type === 'file-sql' ? <FiletypeSql size={size} /> :
         type === 'file-db'  ? <img src={filetypeDbUrl} alt="" width={size} height={size} /> :
         type === 'file-xml' ? <FiletypeXml size={size} /> :
+        type === 'file-png' ? <FiletypePng size={size} /> :
         <ArrowsAngleExpand size={size} />
     );
 }
 
-export function ClickableIcon({type, onClick, disabled = false, size = 15}: {type: IconType, onClick: () => void, disabled?: boolean, size?: number}) {
-    return (
+export function ClickableIcon({type, onClick, disabled = false, size = 15, tooltipText = undefined, tooltipPlacement = 'bottom'}: {type: IconType, onClick: () => void, disabled?: boolean, size?: number, tooltipText?: string, tooltipPlacement?: 'left' | 'right' | 'top' | 'bottom'}) {
+    const icon =
         <span className={classNames(['clickable-icon', disabled ? 'disabled': ''])} onClick={(e) => {
                 e.stopPropagation();
                 onClick();
             }}>
             <Icon type={type}  size={size} />
-        </span>
-    )
+        </span>;
+
+    if (tooltipText) {
+        return (
+            <OverlayTrigger
+                placement={tooltipPlacement}
+                delay={{ show: 0, hide: 0 }}
+                overlay={(props: TooltipProps) => (
+                    <Tooltip {...props}>{ tooltipText }</Tooltip>
+                )}
+                // Show only on hover, not on click (problem with modals opening)
+                trigger={['hover', 'focus']}>
+                {icon}
+            </OverlayTrigger>
+        )
+    }
+    else {
+        return icon;
+    }
 }
 
-export function IconLinkButton({type, href, disabled = false, size = 15}: {type: IconType, href: string, disabled?: boolean, size?: number}) {
-    return (
+export function IconLinkButton({type, href, disabled = false, size = 15, tooltipText = undefined, tooltipPlacement = 'bottom'}: {type: IconType, href: string, disabled?: boolean, size?: number, tooltipText?: string, tooltipPlacement?: 'left' | 'right' | 'top' | 'bottom'}) {
+    const button =
         <a href={href} className={classNames(['clickable-icon-button', 'btn', disabled ? 'disabled': '', 'btn-outline-dark'])}>
             <Icon type={type} size={size} />
-        </a>
-    );
+        </a>;
+    
+    if (tooltipText) {
+        return (
+            <OverlayTrigger
+                placement={tooltipPlacement}
+                delay={{ show: 0, hide: 0 }}
+                overlay={(props: TooltipProps) => (
+                    <Tooltip {...props}>{ tooltipText }</Tooltip>
+                )}
+                // Show only on hover, not on click (problem with modals opening)
+                trigger={['hover', 'focus']}>
+                {button}
+            </OverlayTrigger>
+        )
+    }
+    else {
+        return button;
+    }
 }
 
-export function IconActionButton({type, onClick, disabled = false, size = 15}: {type: IconType, onClick: () => void, disabled?: boolean, size?: number}) {
-    return (
+export function IconActionButton({type, onClick, disabled = false, size = 15, tooltipText = undefined, tooltipPlacement = 'bottom'}: {type: IconType, onClick: () => void, disabled?: boolean, size?: number, tooltipText?: string, tooltipPlacement?: 'left' | 'right' | 'top' | 'bottom'}) {
+    const button = 
         <Button className={classNames(['clickable-icon-button', 'btn', disabled ? 'disabled': '', 'btn-outline-dark'])} onClick={(e) => {
                 e.stopPropagation();
                 onClick();
             }}>
             <Icon type={type} size={size} />
-        </Button>
-    )
+        </Button>;
+    
+    if (tooltipText) {
+        return (
+            <OverlayTrigger
+                placement={tooltipPlacement}
+                delay={{ show: 0, hide: 0 }}
+                overlay={(props: TooltipProps) => (
+                    <Tooltip {...props}>{ tooltipText }</Tooltip>
+                )}
+                // Show only on hover, not on click (problem with modals opening)
+                trigger={['hover', 'focus']}>
+                {button}
+            </OverlayTrigger>
+        )
+    }
+    else {
+        return button;
+    }
 }
 
 
@@ -326,7 +390,7 @@ type Selection<T> =
     { type: 'provided', fileSource: Named<T> } |
     { type: 'uploaded-file' }
 
-export function OpenFileModal<T>({ title, fileUploadTitle, fileIconTypes, fileAccept, show, setShow, providedFileSources, fileToSource, onOpenFile }: {
+export function OpenSourceModal<T>({ title, fileUploadTitle, fileIconTypes, fileAccept, show, setShow, providedFileSources, fileToSource, onOpenFile }: {
     title: string,
     fileUploadTitle: string,
     fileIconTypes: IconType[],
@@ -370,7 +434,7 @@ export function OpenFileModal<T>({ title, fileUploadTitle, fileIconTypes, fileAc
                 <Modal.Title>{title}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form>
+                <Form className='form-container'>
                     <ListGroup>
                         {
                             providedFileSources.map((fileSource, i) =>
@@ -425,14 +489,14 @@ export function OpenFileModal<T>({ title, fileUploadTitle, fileIconTypes, fileAc
     );
 }
 
-export function OpenDbFileModal({ show, setShow, providedFileSources, onOpenFile }: {
+export function OpenDbSourceModal({ show, setShow, providedFileSources, onOpenFile }: {
     show: boolean,
     setShow: (show: boolean) => void,
     providedFileSources: Named<DbSource>[],
     onOpenFile: (source: Named<DbSource>) => void
 }) {
     return (
-        <OpenFileModal
+        <OpenSourceModal
             title="Datenbank laden"
             fileUploadTitle='Datenbankdatei hochladen'
             fileIconTypes={['file-sql', 'file-db']}
@@ -466,14 +530,14 @@ export function OpenDbFileModal({ show, setShow, providedFileSources, onOpenFile
     );
 }
 
-export function OpenGameFileModal({ show, setShow, providedFileSources, onOpenFile }: {
+export function OpenGameSourceModal({ show, setShow, providedFileSources, onOpenFile }: {
     show: boolean,
     setShow: (show: boolean) => void,
     providedFileSources: Named<GameSource>[],
     onOpenFile: (source: Named<GameSource>) => void
 }) {
     return (
-        <OpenFileModal
+        <OpenSourceModal
             title="Spiel laden"
             fileUploadTitle='Spieldatei hochladen'
             fileIconTypes={['file-xml']}
@@ -491,6 +555,39 @@ export function OpenGameFileModal({ show, setShow, providedFileSources, onOpenFi
                             resolve({ type: 'xml', source: { type: 'inline', content: f.target.result } });
                         };
                         fileReader.readAsText(file, "UTF-8");
+                    });
+                }
+            }
+            onOpenFile={onOpenFile}
+        />
+    );
+}
+
+export function OpenImageSourceModal({ show, setShow, providedFileSources, onOpenFile }: {
+    show: boolean,
+    setShow: (show: boolean) => void,
+    providedFileSources: Named<ImageSource>[],
+    onOpenFile: (source: Named<ImageSource>) => void
+}) {
+    return (
+        <OpenSourceModal
+            title="Bild laden"
+            fileUploadTitle='Bild hochladen'
+            fileIconTypes={['file-png']}
+            fileAccept='.png'
+            show={show}
+            setShow={setShow}
+            providedFileSources={providedFileSources}
+            fileToSource={
+                function (file: File): Promise<ImageSource> {
+                    const fileReader = new FileReader();
+
+                    return new Promise((resolve, reject) => {
+                        fileReader.onload = (f) => {
+                            assert(f.target?.result instanceof ArrayBuffer);
+                            resolve({ type: 'inline', content: new Uint8Array(f.target.result) });
+                        };
+                        fileReader.readAsArrayBuffer(file);
                     });
                 }
             }
@@ -521,7 +618,7 @@ export function NewGameFileModal<T>({ show, setShow, onCreate }: {
                 <Modal.Title>Neues Spiel</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form>
+                <Form className='form-container'>
                     <div>
                         <label htmlFor={'new-game-name'} className='mb-2'><strong>Name:</strong></label>
                         <Form.Control
@@ -541,5 +638,99 @@ export function NewGameFileModal<T>({ show, setShow, onCreate }: {
                 </Button>
             </Modal.Footer>
         </EskuelModal>
+    );
+}
+
+
+/////////////////////////////
+// Load Source with status //
+/////////////////////////////
+
+export type LoadingStatusEmpty   = { kind: 'empty' };
+export type LoadingStatusPending = { kind: 'pending' };
+export type LoadingStatusLoaded  = { kind: 'loaded' };
+export type LoadingStatusFailed  = { kind: 'failed', error: string };
+export type LoadingStatus = LoadingStatusEmpty | LoadingStatusPending | LoadingStatusLoaded | LoadingStatusFailed;
+
+export function LoadingBarWithOpenButton( { setShowOpenModal, tooltipText, status }: { setShowOpenModal: (value: boolean) => void, tooltipText: string, status: LoadingStatus } ) {
+    return (
+        <div className='d-flex col-gap-default'>
+            <div>
+                <IconActionButton type='open' onClick={() => setShowOpenModal(true)} tooltipText={tooltipText} />
+            </div>
+            {
+                status.kind === 'empty' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Nichts geladen
+                    </Alert>
+            }
+            {
+                status.kind === 'pending' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Lädt...
+                    </Alert>
+
+            }
+            {
+                status.kind === 'loaded' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="success">
+                        Geladen
+                    </Alert>
+
+            }
+            {
+                status.kind === 'failed' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="danger">
+                        {status.error}
+                    </Alert>
+            }
+        </div>
+    );
+}
+
+export function LoadingBar( { status }: { status: LoadingStatus } ) {
+    return (
+        <div className='d-flex col-gap-default'>
+            {
+                status.kind === 'empty' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Nichts geladen
+                    </Alert>
+            }
+            {
+                status.kind === 'pending' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Lädt...
+                    </Alert>
+
+            }
+            {
+                status.kind === 'loaded' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="success">
+                        Geladen
+                    </Alert>
+
+            }
+            {
+                status.kind === 'failed' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="danger">
+                        {status.error}
+                    </Alert>
+            }
+        </div>
+    );
+}
+
+
+
+////////////
+// Images //
+////////////
+
+export function UserImage( { base64string }: { base64string: string } ) {
+    return (
+        <div className="text-center">
+            <img src={`data:image/png;base64,${base64string}`} alt="" style={{ maxWidth: '100%', maxHeight: '200px' }}  />
+        </div>
     );
 }

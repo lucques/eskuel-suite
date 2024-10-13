@@ -24,12 +24,13 @@ import './screen.css';
 
 // Local
 import { ColInfo, Schema, TableInfo } from './schema';
-import { BrowserInstance, Status } from './browser-instance';
-import { RunInitScriptFail, FetchDbFail, SqlResult, ParseSchemaFail, sqlResultHash, DbSource } from "./sql-js-api";
+import { BrowserInstance, Status, statusToLoadingStatus } from './browser-instance';
+import { RunInitScriptFail, FetchDbFail, SqlResult, ParseSchemaFail, sqlResultHash, DbSource, ReadSqliteDbFail } from "./sql-js-api";
 
-import { Named, RawSource, assert } from "./util";
-import { Widget, ResultTableView, ClickableIcon, OpenFileModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor, OpenDbFileModal } from './react';
-import { GameDatabaseStatus, SchemaStatus } from './game-pure';
+import { Named, Source, assert } from "./util";
+import { Widget, ResultTableView, ClickableIcon, OpenSourceModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor, OpenDbSourceModal, LoadingStatus, LoadingBar } from './react';
+import { SchemaStatus, schemaStatusToLoadingStatus } from './game-pure';
+import { LoadGameDbWidgetStatus } from './game-editor-react';
 
 
 //////////////////////
@@ -175,7 +176,7 @@ function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onSel
                         <strong>SQL-Browser</strong>
                     </li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} tooltipText='Datenbank öffnen' />
                         {
                             // Disabled: Edit should not be possible anymore.
                             // TODO: Remove functionality (= currently dead code)
@@ -183,11 +184,11 @@ function MultiInstanceBrowserHeaderView({fileSources, viewedInstanceIndex, onSel
                         }
                     </li>
                     <li className="header-home list-group-item">
-                        <IconLinkButton type='home' href="../" />
+                        <IconLinkButton type='home' href="../" tooltipText='Hauptmenü' />
                     </li>
                 </ul>
             </div>
-            <OpenDbFileModal
+            <OpenDbSourceModal
                 providedFileSources={fileSources}
                 show={showOpenModal}
                 setShow={setShowOpenModal}
@@ -237,53 +238,35 @@ function BrowserInstanceView({instance, status}: {instance: BrowserInstance, sta
 
     return (
         <>
-            <StatusView status={status} />
-            <GridLayout
-                autoSize={true}
-                layout={layout}
-                cols={12}
-                rowHeight={30}
-                width={1250}
-                margin={[10, 10]}
-                containerPadding={[0, 0]}
-                draggableHandle=".widget-header"
-            >
-                <div key="query">
-                    <QueryWidget status={status} onSubmit={onQuerySubmit} />
-                </div>
-                <div key="schema">
-                    <SchemaWidget instance={instance} status={status} />
-                </div>
-                <div key="results">
-                    <ResultsWidget results={results} removeResult={removeResult} />
-                </div>
-            </GridLayout>
+            {
+                status.kind != 'active' &&
+                    <LoadingBar status={statusToLoadingStatus(status)} />
+            }
+            {
+                status.kind === 'active' &&
+                    <GridLayout
+                        autoSize={true}
+                        layout={layout}
+                        cols={12}
+                        rowHeight={30}
+                        width={1250}
+                        margin={[10, 10]}
+                        containerPadding={[0, 0]}
+                        draggableHandle=".widget-header"
+                    >
+                        <div key="query">
+                            <QueryWidget status={status} onSubmit={onQuerySubmit} />
+                        </div>
+                        <div key="schema">
+                            <SchemaWidget instance={instance} status={status} />
+                        </div>
+                        <div key="results">
+                            <ResultsWidget results={results} removeResult={removeResult} />
+                        </div>
+                    </GridLayout>
+            }
         </>
     );
-}
-
-function StatusView({status}: {status: Status}) {
-    if (status.kind === 'pending') {
-        return (
-            <Alert className="status-view" variant="warning">
-                Lade...
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'fetch-db') {
-        return (
-            <Alert className="status-view" variant="danger">
-                Fehler beim Laden der Skript-Datei <code>{status.error.url}</code>
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'run-init-script') {
-        return (
-            <Alert className="status-view" variant="danger">
-                Fehler beim Ausführen des Initial-SQL-Skripts: {status.error.details}
-            </Alert>
-        );
-    }
 }
 
 function QueryWidget({status, onSubmit}: {status: Status, onSubmit: (sql: string) => void}) {
@@ -295,45 +278,6 @@ function QueryWidget({status, onSubmit}: {status: Status, onSubmit: (sql: string
             <div>
                 <Button variant="primary" onClick={() => { onSubmit(sql); }} disabled={status.kind !== 'active'}>Ausführen</Button>
             </div>
-        </Widget>
-    );
-}
-
-function SchemaWidget({instance, status}: {instance: BrowserInstance, status: Status}) {
-    const [gameDatabaseStatus, setGameDatabaseStatus] = useState<GameDatabaseStatus>( { kind: 'pending' } );
-
-    // Update the schema status when the inst status changes
-    useEffect(() => {
-        setGameDatabaseStatus({ kind: 'pending' });
-
-        instance.getSchema().then((schemaResult) => {
-            // Success
-            if (schemaResult.ok) {
-                setGameDatabaseStatus({ kind: 'loaded', data: schemaResult.data });
-            }
-            // Failure (various options)
-            else {
-                setGameDatabaseStatus({ kind: 'failed', error: schemaResult.error });
-            }
-        });
-    }, [status]);
-
-    return (
-        <Widget className={'widget-schema'} title={'Schema'}>
-            {
-                gameDatabaseStatus.kind === 'pending' ? (
-                    <p className='schema-status'>Lade...</p>
-                )
-                : gameDatabaseStatus.kind === 'failed' ? (
-                    gameDatabaseStatus.error.kind === 'parse-schema' ? (
-                        <p className='schema-status'>Fehler beim Einlesen des Schemas: {gameDatabaseStatus.error.details}</p>
-                    )
-                    : (
-                        <p className='schema-status'>Datenbankfehler</p>
-                    )
-                ) :
-                    <SchemaView schema={gameDatabaseStatus.data} />
-            }
         </Widget>
     );
 }
@@ -389,5 +333,46 @@ function ResultErrorView({sql, message, onClose}: {sql: string, message: string,
                 <p><strong>Fehlermeldung:</strong> {message}</p>
             </ListGroup.Item>
         </ListGroup>
+    );
+}
+
+
+/////////////////
+// Schema view //
+/////////////////
+
+function SchemaWidget({instance, status}: {instance: BrowserInstance, status: Status}) {
+    const [schemaStatus, setSchemaStatus] = useState<SchemaStatus>( { kind: 'pending' } );
+
+    // Update the schema status when the inst status changes
+    useEffect(() => {
+        setSchemaStatus({ kind: 'pending' });
+
+        instance.getSchema().then((schemaResult) => {
+            // Success
+            if (schemaResult.ok) {
+                setSchemaStatus({ kind: 'loaded', data: schemaResult.data });
+            }
+            // Failed to parse
+            else {
+                // Assertion holds because schema widget is only visible when db is active
+                assert(schemaResult.error.kind === 'parse-schema');
+
+                setSchemaStatus({ kind: 'failed', error: schemaResult.error });
+            }
+        });
+    }, [status]);
+
+    return (
+        <Widget className={'widget-schema'} title={'Schema'}>
+            {
+                schemaStatus.kind != 'loaded' &&
+                    <LoadingBar status={schemaStatusToLoadingStatus(schemaStatus)} />
+            }
+            {
+                schemaStatus.kind === 'loaded' &&
+                    <SchemaView schema={schemaStatus.data} />
+            }
+        </Widget>
     );
 }

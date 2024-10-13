@@ -29,10 +29,10 @@ import './screen.css';
 
 import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
-import { Named, RawSource, assert } from "./util";
-import { GameInstance, Status } from './game-engine-instance';
+import { Named, Source, assert } from "./util";
+import { GameInstance } from './game-engine-instance';
 import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, GameSource } from './game-pure';
-import { ClickableIcon, IconActionButton, IconLinkButton, OpenFileModal, OpenGameFileModal, ResultTableView, Widget } from './react';
+import { ClickableIcon, Icon, IconActionButton, IconLinkButton, OpenSourceModal, OpenGameSourceModal, ResultTableView, Widget } from './react';
 import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
 export { Game } from './game-pure';
@@ -63,7 +63,7 @@ export function GameConsoleView({fileSources, initialFileSource = undefined, ini
             {
                 instance === null
                 ?
-                    <p>Klicke auf 📂, um ein Spiel zu öffnen.</p>
+                    <p>Klicke auf <Icon type='open' size={15} />, um ein Spiel zu öffnen.</p>
                 :
                     <GameInstanceProvider key={instance.id}>
                         <GameInstanceView instance={instance} />
@@ -83,13 +83,13 @@ function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: Named<
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Spielekonsole</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} disabled={false} tooltipText='Spiel öffnen' />
                     </li>
                     <li className="header-home list-group-item">
-                        <IconLinkButton type='home' href="../" />
+                        <IconLinkButton type='home' href="../" tooltipText='Hauptmenü' />
                     </li>
                 </ul>
-                <OpenGameFileModal
+                <OpenGameSourceModal
                     providedFileSources={fileSources}
                     onOpenFile={onSelectGame}
                     show={showOpenModal}

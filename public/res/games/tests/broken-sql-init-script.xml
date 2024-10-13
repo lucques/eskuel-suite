@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<game>
+    <head>
+        <title>Test</title>
+        <teaser>Test</teaser>
+        <copyright>Test</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Just a test</text>
+        </text-scene>
+    </scenes>
+    <initial-sql-script>SELC some nonsense;</initial-sql-script>
+</game>

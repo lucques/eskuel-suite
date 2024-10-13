@@ -17,7 +17,6 @@ export function assert(condition: boolean, message?: string): asserts condition 
     }
 }
 
-
 // Reorder a list
 export function reorder<T,>(list: T[], startIndex: number, endIndex: number): T[] {
     const result: T[] = Array.from(list);
@@ -27,23 +26,26 @@ export function reorder<T,>(list: T[], startIndex: number, endIndex: number): T[
     return result;
 };
 
-
 // Generate unique ids
 let nextId = 0;
 export function generateId(): number {
     return nextId++;
 }
 
-// Files and where they come from
-export type RawSource<T> =
+
+////////////
+// Source //
+////////////
+
+export type Source<T> =
   | { type: 'fetch';  url: string; }
   | { type: 'inline'; content: T };
 export type Named<T> = T & { name: string };
 
-export type FetchFail = { kind: 'fetch', url: string }
+export type FetchFail            = { kind: 'fetch', url: string }
+export type FileSizeTooLargeFail = { kind: 'file-size-too-large' }
 
-
-export function materializeTextSource(source: RawSource<string>): Promise<Success<string> | Fail<FetchFail>> {
+export function materializeTextSource(source: Source<string>): Promise<Success<string> | Fail<FetchFail>> {
     // Fetch
     if (source.type === 'fetch') {
         return fetch(source.url)
@@ -69,7 +71,7 @@ export function materializeTextSource(source: RawSource<string>): Promise<Succes
     }
 }
 
-export function materializeBinarySource(source: RawSource<Uint8Array>): Promise<Success<Uint8Array> | Fail<FetchFail>> {
+export function materializeBinarySource(source: Source<Uint8Array>): Promise<Success<Uint8Array> | Fail<FetchFail>> {
     // Fetch
     if (source.type === 'fetch') {
         return fetch(source.url)
@@ -114,13 +116,13 @@ export function getFilenameExtension(path: string): string | null {
 }
 
 
-// Base64 encoding/decoding
+//////////////////////////////
+// Base64 encoding/decoding //
+//////////////////////////////
+
 export function encodeToBase64(uint8Array: Uint8Array): string {
-    // Convert Uint8Array to a binary string
-    const binaryString = String.fromCharCode(...uint8Array);
-    
-    // Convert the binary string to a Base64 encoded string
-    return btoa(binaryString); // btoa() encodes to Base64
+    const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
+    return btoa(binaryString);
 }
 
 export function decodeFromBase64(base64String: string): Uint8Array {
@@ -135,3 +137,13 @@ export function decodeFromBase64(base64String: string): Uint8Array {
     
     return uint8Array;
 }
+
+
+////////////
+// Images //
+////////////
+
+export type ImageSource = Source<Uint8Array>
+
+export type PngFileInvalidFail = { kind: 'png-file-invalid' }
+export type UserImageFail = FetchFail | FileSizeTooLargeFail | PngFileInvalidFail

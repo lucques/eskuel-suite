@@ -1,5 +1,5 @@
 // React
-import React, { ReactComponentElement, ReactElement, ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
+import { ReactComponentElement, ReactElement, ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 // React-Bootstrap
@@ -35,14 +35,16 @@ const customStyle = {
 import './screen.css';
 
 
-import { DbSource, FetchDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
+import { DbSource, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
-import { Named, RawSource, assert, reorder } from "./util";
-import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, GameDatabaseStatus, ImageScene, GameSource, createBlankGame } from './game-pure';
-import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbFileModal, OpenFileModal, OpenGameFileModal, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
+import { Fail, FetchFail, ImageSource, Named, Source, Success, UserImageFail, assert, encodeToBase64, materializeBinarySource, reorder } from "./util";
+import { GameInstance } from './game-engine-instance';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, ImageScene, GameSource, createBlankGame, GameInitStatus, gameInitStatusToLoadingStatus as gameInitStatusToLoadingStatus } from './game-pure';
+import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbSourceModal, OpenSourceModal, OpenGameSourceModal, OpenImageSourceModal, QueryEditor, ResultTableView, SchemaView, UserImage, Widget, LoadingBarWithOpenButton, LoadingStatus, LoadingBar } from './react';
 import { EditorInstance } from './game-editor-instance';
 import { BrowserInstance } from './browser-instance';
+import { initial } from 'lodash';
+import React from 'react';
 
 export { Game } from './game-pure';
 
@@ -51,11 +53,8 @@ export { Game } from './game-pure';
 // Wrapper types //
 ///////////////////
 
-type EditableTextScene = TextScene & { key: string };
-type EditableImageScene = ImageScene & { key: string };
-type EditableSelectScene = SelectScene & { key: string };
-type EditableManipulateScene = ManipulateScene & { key: string };
-type EditableScene = EditableTextScene | EditableImageScene | EditableSelectScene | EditableManipulateScene;
+type Editable<T>   = T & { key: string };
+type EditableScene = Editable<TextScene> | Editable<ImageScene> | Editable<SelectScene> | Editable<ManipulateScene>;
 
 let nextEditableSceneKey = 0;
 function createEditableScene(scene: Scene): EditableScene {
@@ -113,7 +112,7 @@ export function MultiEditorComponentView({initialInstances, fileSources}: {initi
     // Explicitly track instance status //
     //////////////////////////////////////
 
-    const [status, setStatus] = useState<Status[]>(instances.map((inst: EditorInstance) => inst.getStatus()));
+    const [status, setStatus] = useState<GameInitStatus[]>(instances.map((inst: EditorInstance) => inst.getStatus()));
     const updateStatus = () => { setStatus(instances.map((inst: EditorInstance) => inst.getStatus())); }
     const updateStatusForSingle = (index: number) => {
         setStatus((status) => {
@@ -264,12 +263,12 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                 <ul className="header-meta list-group list-group-horizontal">
                     <li className="header-name list-group-item"><strong>SQL-Spieleeditor</strong></li>
                     <li className="header-toolbox list-group-item flex-fill">
-                        <IconActionButton type='new'  onClick={() => setShowNewModal(true)} />
-                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
-                        <IconActionButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} />
+                        <IconActionButton type='new'  onClick={() => setShowNewModal(true)} tooltipText='Neues Spiel' />
+                        <IconActionButton type='open' onClick={() => setShowOpenModal(true)} tooltipText='Spiel öffnen' />
+                        <IconActionButton type='save' onClick={() => { if(viewedInstanceIndex !== null) { onSave(viewedInstanceIndex); } }} disabled={viewedInstanceIndex === null} tooltipText='Spiel herunterladen' />
                     </li>
                     <li className="header-home list-group-item">
-                        <IconLinkButton type='home' href="../" />
+                        <IconLinkButton type='home' href="../" tooltipText='Hauptmenü' />
                     </li>
                 </ul>
             </div>
@@ -279,7 +278,7 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
                 setShow={setShowNewModal}
             />
 
-            <OpenGameFileModal
+            <OpenGameSourceModal
                 providedFileSources={fileSources}
                 onOpenFile={onSelect}
                 show={showOpenModal}
@@ -290,7 +289,7 @@ function MultiInstanceEditorHeaderView({fileSources, viewedInstanceIndex, onSave
 }
 
 
-export function EditorInstanceView({instance, status}: {instance: EditorInstance, status: Status}) {
+export function EditorInstanceView({instance, status}: {instance: EditorInstance, status: GameInitStatus}) {
 
     //////////////////
     // Current game //
@@ -300,7 +299,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
     const [teaser, setTeaser] = useState<string>('');
     const [copyright, setCopyright] = useState<string>('');
     const [scenes, setScenes] = useState<EditableScene[]>([]);
-    const [gameDatabaseStatus, setGameDatabaseStatus] = useState<GameDatabaseStatus>({ kind: 'pending' });
+    const [loadGameDbWidgetStatus, setLoadGameDbWidgetStatus] = useState<LoadGameDbWidgetStatus>({ kind: 'pending' });
 
     const updateMetaData = () => {
         instance.getGame().then(gameRes => {
@@ -314,18 +313,24 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         });
     }
 
-    const updateSchemaStatus = () => {
-        instance.getSchema().then((schemaResult) => {
+    const updateLoadGameDbWidgetStatus = () => {
+        Promise.all([instance.getSchema(), instance.getGame()]).then(([schemaResult, gameResult]) => {
             // Success
-            if (schemaResult.ok) {
-                setGameDatabaseStatus({ kind: 'loaded', data: schemaResult.data });
+            if (schemaResult.ok && gameResult.ok) {
+                if (gameResult.data.dbData === null) {
+                    setLoadGameDbWidgetStatus({ kind: 'empty' });
+                }
+                else {
+                    setLoadGameDbWidgetStatus({ kind: 'loaded', data: schemaResult.data });
+                }
             }
             // Fail
             else {
                 // Assertion holds because inst status must be "active"
-                assert(schemaResult.error.kind === 'run-init-script' || schemaResult.error.kind === 'parse-schema');
+                assert(gameResult.ok);
+                assert(!schemaResult.ok && schemaResult.error.kind !== 'fetch-xml' && schemaResult.error.kind !== 'parse-xml');
 
-                setGameDatabaseStatus({ kind: 'failed', error: schemaResult.error });
+                setLoadGameDbWidgetStatus({ kind: 'failed', error: schemaResult.error });
             }
         });
     }
@@ -349,7 +354,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         instance.resolve().then((s) => {               
             if (s.ok) {
                 updateMetaData();
-                updateSchemaStatus();
+                updateLoadGameDbWidgetStatus();
                 initScenes();
             }
         });
@@ -372,7 +377,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
 
     const onSetDbSource = (dbSource: DbSource) => {
         instance.onCommitDbSource(dbSource).then(() => {
-            updateSchemaStatus();
+            updateLoadGameDbWidgetStatus();
         });
     }
 
@@ -382,12 +387,6 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         instance.onCommitScene(index, scene).then(() => {
             // Nothing to do
         });
-    }
-
-    const onAddScene = (scene: Scene) => {
-        // TODO
-        // const newScene = createEditableScene(scene);
-        // setScenes((scenes) => [...scenes, newScene]);
     }
 
     const onDeleteScene = (scene: EditableScene) => {       
@@ -413,24 +412,21 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
     };
 
 
-    ///////////////////////////
-    // Edit text scene modal //
-    ///////////////////////////
+    //////////////////////
+    // Edit scene modal //
+    //////////////////////
     
     // Text scene currently being edited or `null` if none is being edited
-    const [editedTextScene, setEditedTextScene] = useState<EditableTextScene | null>(null);
-    const onEditTextSceneStart = (scene: EditableTextScene) => {
+    const [editedScene, setEditedScene] = useState<EditableScene | null>(null);
+    const onEditSceneStart = (scene: EditableScene) => {
         // Start edit mode
-        setEditedTextScene(scene);
+        setEditedScene(scene);
     };
-    const onEditTextSceneEnd = () => {
+    const onEditSceneEnd = () => {
         // End edit mode
-        setEditedTextScene(null);
+        setEditedScene(null);
     };
-    const onEditTextSceneEndWithSave = (scene: EditableTextScene) => {
-        // Assertion holds by UI design
-        assert(editedTextScene !== null);
-
+    const onEditSceneEndWithSave = (scene: EditableScene) => {
         // Update UI
         setScenes(scenes.map((s) => s.key === scene.key ? scene : s));
 
@@ -441,71 +437,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
         });
 
         // End edit mode
-        setEditedTextScene(null);
-    };
-
-
-    /////////////////////////////
-    // Edit select scene modal //
-    /////////////////////////////
-    
-    // Text scene currently being edited or `null` if none is being edited
-    const [editedSelectScene, setEditedSelectScene] = useState<EditableSelectScene | null>(null);
-    const onEditSelectSceneStart = (scene: EditableSelectScene) => {
-        // Start edit mode
-        setEditedSelectScene(scene);
-    };
-    const onEditSelectSceneEnd = () => {
-        // End edit mode
-        setEditedSelectScene(null);
-    };
-    const onEditSelectSceneEndWithSave = (scene: EditableSelectScene) => {
-        // Assertion holds by UI design
-        assert(editedSelectScene !== null);
-
-        // Update UI
-        setScenes(scenes.map((s) => s.key === scene.key ? scene : s));
-
-        // Propagate to model
-        const index = scenes.findIndex((s) => s.key === scene.key);
-        instance.onCommitScene(index, scene).then(() => {
-            // Nothing to do
-        });
-
-        // End edit mode
-        setEditedSelectScene(null);
-    };
-
-
-    /////////////////////////////////
-    // Edit manipulate scene modal //
-    /////////////////////////////////
-    
-    // Text scene currently being edited or `null` if none is being edited
-    const [editedManipulateScene, setEditedManipulateScene] = useState<EditableManipulateScene | null>(null);
-    const onEditManipulateSceneStart = (scene: EditableManipulateScene) => {
-        // Start edit mode
-        setEditedManipulateScene(scene);
-    };
-    const onEditManipulateSceneEnd = () => {
-        // End edit mode
-        setEditedManipulateScene(null);
-    };
-    const onEditManipulateSceneEndWithSave = (scene: EditableManipulateScene) => {
-        // Assertion holds by UI design
-        assert(editedManipulateScene !== null);
-
-        // Update UI
-        setScenes(scenes.map((s) => s.key === scene.key ? scene : s));
-
-        // Propagate to model
-        const index = scenes.findIndex((s) => s.key === scene.key);
-        instance.onCommitScene(index, scene).then(() => {
-            // Nothing to do
-        });
-
-        // End edit mode
-        setEditedManipulateScene(null);
+        setEditedScene(null);
     };
 
 
@@ -542,51 +474,24 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
 
     return (
         <>
-            <StatusView status={status} />
             {
-                status.kind === 'active' ? (
+                status.kind != 'active' &&
+                    <LoadingBar status={gameInitStatusToLoadingStatus(status)} />
+            }
+            {
+                status.kind === 'active' &&
                     <div className="editor">
                         <MetaDataView title={title} setTitle={setTitle} teaser={teaser} setTeaser={setTeaser} copyright={copyright} setCopyright={setCopyright} onCommitMetaData={onCommitMetaData} />
-                        <EditableScenesWidget scenes={scenes} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onAddSceneStart={onAddSceneStart} onDeleteScene={onDeleteScene} onReorderScenes={onReorderScenes} />
+                        <EditableScenesWidget scenes={scenes} onEditSceneStart={onEditSceneStart} onAddSceneStart={onAddSceneStart} onDeleteScene={onDeleteScene} onReorderScenes={onReorderScenes} />
                         <div className="editor-sidebar">
-                            <InitScriptWidget gameDatabaseStatus={gameDatabaseStatus} setDbSource={onSetDbSource} />
+                            <LoadGameDbSourceWidget status={loadGameDbWidgetStatus} setSource={onSetDbSource} />
                         </div>
                     </div>
-                )
-                : null
             }
-            <EditTextSceneModal scene={editedTextScene} onHide={onEditTextSceneEnd} onSaveAndHide={onEditTextSceneEndWithSave} />
-            <EditSelectSceneModal scene={editedSelectScene} onHide={onEditSelectSceneEnd} onSaveAndHide={onEditSelectSceneEndWithSave} />
-            <EditManipulateSceneModal scene={editedManipulateScene} onHide={onEditManipulateSceneEnd} onSaveAndHide={onEditManipulateSceneEndWithSave} />
-            <AddSceneModal show={addSceneShow} onHide={onAddSceneEnd} onSaveAndHide={onAddSceneEndWithSave}  />
+            <EditSceneModal initialScene={editedScene} onHide={onEditSceneEnd} onSaveAndHide={onEditSceneEndWithSave} />
+            <AddSceneModal show={addSceneShow} onHide={onAddSceneEnd} onSaveAndHide={onAddSceneEndWithSave} />
         </>
     );
-}
-
-function StatusView({status}: {status: Status}) {
-    if (status.kind === 'pending') {
-        return (
-            <Alert className="status-view" variant="info">
-                <Alert.Heading>Lade...</Alert.Heading>
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'fetch-xml') {
-        return (
-            <Alert className="status-view" variant="danger">
-                <Alert.Heading>Fehler beim Einlesen der Spieldatei</Alert.Heading>
-                URL: {status.error.url}
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'parse-xml') {
-        return (
-            <Alert className="status-view" variant="danger">
-                <Alert.Heading>Fehler beim Einlesen der Spieldatei</Alert.Heading>
-                Fehlermeldung: {status.error.details}
-            </Alert>
-        );
-    }
 }
 
 function MetaDataView({title, setTitle, teaser, setTeaser, copyright, setCopyright, onCommitMetaData}: {title: string, setTitle: (title: string) => void, teaser: string, setTeaser: (title: string) => void, copyright: string, setCopyright: (title: string) => void, onCommitMetaData: () => void }) {
@@ -627,82 +532,7 @@ function MetaDataView({title, setTitle, teaser, setTeaser, copyright, setCopyrig
     );
 }
 
-function InitScriptWidget({gameDatabaseStatus, setDbSource}: {gameDatabaseStatus: GameDatabaseStatus, setDbSource: (source: DbSource) => void}) {
-
-    const [showOpenModal, setShowOpenModal ] = useState(false);
-
-    const onSelect = (source: Named<DbSource>) => {
-        setDbSource(source);
-    }
-
-    return (
-        <>
-            <div>
-                <MultiWidget className={'widget-initscript'} title={'Datenbank'}>
-                    <div className='widget-initscript-load d-flex col-gap-default'>
-                        <div>
-                            <IconActionButton type='open' onClick={() => setShowOpenModal(true)} />
-                        </div>
-                        <GameDatabaseStatusShortView status={gameDatabaseStatus} />
-                    </div>
-                    {
-                        gameDatabaseStatus.kind === 'loaded' && (
-                            <div className='widget-initscript-schema'>
-                                <SchemaView schema={gameDatabaseStatus.data} />
-                            </div>
-                        )
-                    }
-                </MultiWidget>
-            </div>
-            <OpenDbFileModal
-                providedFileSources={[]}
-                show={showOpenModal}
-                setShow={setShowOpenModal}
-                onOpenFile={onSelect}
-            />
-        </>
-    );
-}
-
-function GameDatabaseStatusShortView({status}: {status: GameDatabaseStatus}) {
-    if (status.kind === 'pending') {
-        return (
-            <Alert className="game-database-status-short-view flex-fill" variant="info">
-                Lade...
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'fetch-db') {
-        return (
-            <Alert className="game-database-status-short-view" variant="danger">
-                Fehler beim Laden der Datei
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'run-init-script') {
-        return (
-            <Alert className="game-database-status-short-view" variant="danger">
-                Fehler beim Initialisieren
-            </Alert>
-        );
-    }
-    else if (status.kind === 'failed' && status.error.kind === 'parse-schema') {
-        return (
-            <Alert className="game-database-status-short-view" variant="danger">
-                Fehler beim Lesen des Schemas
-            </Alert>
-        );
-    }
-    else {
-        return (
-            <Alert className="game-database-status-short-view" variant="success">
-                Datenbank erfolgreich geladen
-            </Alert>
-        );
-    }
-}
-
-function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneStart, onEditManipulateSceneStart, onAddSceneStart, onDeleteScene, onReorderScenes }: {scenes: EditableScene[], onEditTextSceneStart: (scene: EditableTextScene) => void, onEditSelectSceneStart: (scene: EditableSelectScene) => void, onEditManipulateSceneStart: (scene: EditableManipulateScene) => void, onAddSceneStart: () => void, onDeleteScene: (scene: EditableScene) => void, onReorderScenes: (start: number, end: number) => void }) {
+function EditableScenesWidget({ scenes, onEditSceneStart, onAddSceneStart, onDeleteScene, onReorderScenes }: {scenes: EditableScene[], onEditSceneStart: (scene: EditableScene) => void, onAddSceneStart: () => void, onDeleteScene: (scene: EditableScene) => void, onReorderScenes: (start: number, end: number) => void }) {
     const getItemStyle = (isDragging: boolean, draggableStyle: DraggableProvidedDraggableProps) => ({
         // some basic styles to make the items look a bit nicer
         userSelect: "none",
@@ -743,7 +573,7 @@ function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneS
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
                                             >
-                                                <EditableSceneView scene={scene} deletable={scenes.length > 1} onEditTextSceneStart={onEditTextSceneStart} onEditSelectSceneStart={onEditSelectSceneStart} onEditManipulateSceneStart={onEditManipulateSceneStart} onDeleteScene={onDeleteScene} />
+                                                <EditableSceneView scene={scene} deletable={scenes.length > 1} onEditSceneStart={onEditSceneStart} onDeleteScene={onDeleteScene} />
                                             </div>
                                         )}
                                     </Draggable>
@@ -759,22 +589,22 @@ function EditableScenesWidget({ scenes, onEditTextSceneStart, onEditSelectSceneS
     );
 }
 
-function EditableSceneView({scene, deletable, onEditTextSceneStart, onEditSelectSceneStart, onEditManipulateSceneStart, onDeleteScene}: {scene: EditableScene, deletable: boolean, onEditTextSceneStart: (scene: EditableTextScene) => void, onEditSelectSceneStart: (scene: EditableSelectScene) => void, onEditManipulateSceneStart: (scene: EditableManipulateScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
+function EditableSceneView({scene, deletable, onEditSceneStart, onDeleteScene}: {scene: EditableScene, deletable: boolean, onEditSceneStart: (scene: EditableScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
     if (scene.type === 'text') {
-        return <EditableTextSceneView scene={scene} deletable={deletable} onEdit={() => onEditTextSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
+        return <EditableTextSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
     }
     else if (scene.type === 'image') {
-        return <EditableImageSceneView scene={scene} deletable={deletable} onEdit={() => {}} onDelete={() => onDeleteScene(scene)} />;
+        return <EditableImageSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
     }
     else if (scene.type === 'select') {
-        return <EditableSelectSceneView scene={scene} deletable={deletable} onEdit={() => onEditSelectSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableSelectSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
     else {
-        return <EditableManipulateSceneView scene={scene} deletable={deletable} onEdit={() => onEditManipulateSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableManipulateSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
 }
 
-function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableTextScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<TextScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-text-scene-view">
             <EditableSceneViewHeader bsVariant="secondary" deletable={deletable} title={<strong><em>Text</em></strong>} onEdit={onEdit} onDelete={onDelete} />
@@ -785,18 +615,18 @@ function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: Edi
     );
 }
 
-function EditableImageSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableImageScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableImageSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<ImageScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-image-scene-view">
             <EditableSceneViewHeader bsVariant="warning" deletable={deletable} title={<strong><em>Image</em></strong>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-warning bg-opacity-25 border-warning">
-                (Hier kommt das Bild hin -- noch nicht implementiert)
+                <UserImage base64string={scene.base64string} /> 
             </ListGroup.Item>
         </ListGroup>
     );
 }
 
-function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableSelectScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<SelectScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-select-scene-view">
             <EditableSceneViewHeader bsVariant="primary" deletable={deletable} title={<strong><em>Select</em></strong>} onEdit={onEdit} onDelete={onDelete} />
@@ -850,7 +680,7 @@ function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: E
     );
 }
 
-function EditableManipulateSceneView({scene, deletable, onEdit, onDelete}: {scene: EditableManipulateScene, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableManipulateSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<ManipulateScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-manipulte-scene-view">
             <EditableSceneViewHeader bsVariant="success" deletable={deletable} title={<strong><em>Manipulate</em></strong>} onEdit={onEdit} onDelete={onDelete} />
@@ -894,8 +724,8 @@ function EditableSceneViewHeader({bsVariant, deletable, title, onEdit, onDelete}
         <ListGroup.Item className={classNames('editable-scene-view-header', 'd-flex', 'justify-content-between', 'align-items-start', 'bg-'+bsVariant, 'bg-opacity-50', 'border-'+bsVariant)}>
             <p>{title}</p>
             <div>
-                <ClickableIcon type='edit' onClick={onEdit} />
-                { deletable && <ClickableIcon type='close' onClick={onDelete} /> }
+                <ClickableIcon type='edit' onClick={onEdit} tooltipText='Szene bearbeiten' />
+                { deletable && <ClickableIcon type='close' onClick={onDelete} tooltipText='Szene löschen' /> }
             </div>
         </ListGroup.Item>
     );
@@ -904,7 +734,7 @@ function EditableSceneViewHeader({bsVariant, deletable, title, onEdit, onDelete}
 function AddSceneButton({ onAdd }: { onAdd: () => void }) {
     return (
         <div className="add-scene-button">
-            <ClickableIcon type={'add'} size={30} onClick={onAdd}  />
+            <ClickableIcon type={'add'} size={30} onClick={onAdd} tooltipText='Szene hinzufügen' tooltipPlacement='right' />
         </div>
     );
 }
@@ -914,38 +744,90 @@ function AddSceneButton({ onAdd }: { onAdd: () => void }) {
 // Modals //
 ////////////
 
-function EditTextSceneModal ({ scene, onHide, onSaveAndHide }: { scene: EditableTextScene | null, onHide: () => void, onSaveAndHide: (scene: EditableTextScene) => void }) {
-    const [editedText, setEditedText] = useState("");
+type SceneType = 'text' | 'image' | 'select' | 'manipulate';
 
-    const handleShow = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
+function EditSceneModal ({ initialScene, onHide, onSaveAndHide }: { initialScene: EditableScene | null, onHide: () => void, onSaveAndHide: (scene: EditableScene) => void }) {
+    // This state holds the current scene
+    // The following invariant holds:
+    // `initialScene` is null iff `editedScene` is null
+    const [editedScene, setEditedScene] = useState<EditableScene | null>(null);
 
-        setEditedText(scene.text);
-    }
+    const [editType, setEditType] = useState<SceneType | null>(null);
+
+    // This just holds the state for the various tabs
+    // - If `null`: Tab is inactive
+    // - Otherwise: Tab is active 
+    //
+    // The following invariant holds:
+    // If `initialScene` (and `editedScene`) is not null, then:
+    // - exactly one of the following is not null and
+    // - all others are null 
+    const [initialTextScene, setInitialTextScene] = useState<EditableScene | null>(null);
+    const [initialImageScene, setInitialImageScene] = useState<EditableScene | null>(null);
+    const [initialSelectScene, setInitialSelectScene] = useState<EditableScene | null>(null);
+    const [initialManipulateScene, setInitialManipulateScene] = useState<EditableScene | null>(null);
+
+    useEffect(() => {
+        if (initialScene !== null) {
+            setEditedScene(initialScene);
+            setEditType(initialScene.type);
+        }
+        else {
+            setEditedScene(null);
+            setEditType(null);
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+    }, [initialScene]);
+
+    useEffect(() => {
+        if (editType == 'text') {
+            setInitialTextScene(editedScene);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'image') {
+            setInitialTextScene(null);
+            setInitialImageScene(editedScene);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'select') {
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(editedScene);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'manipulate') {
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(editedScene);
+        }
+    }, [editType]);
 
     const handleSave = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
+        // Assertion holds because the modal is only shown when a scene-to-edit is set
+        assert(editedScene !== null);
 
-        onSaveAndHide({ ...scene, text: editedText });
+        onSaveAndHide(editedScene);
     };
 
     return (
-        <EskuelModal className="edit-text-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal show={initialScene !== null} onHide={onHide} size="lg">
             <Modal.Header closeButton>
-                <Modal.Title>Text-Szene bearbeiten</Modal.Title>
+                <Modal.Title>Szene bearbeiten</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form>
-                    <Form.Group>
-                        <Form.Label><strong>Text:</strong></Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={8}
-                            value={editedText   }
-                            onChange={(e) => { setEditedText(e.target.value); }} />
-                    </Form.Group>
+                <Form className='form-container'>
+                    <ChooseSceneType sceneType={editType} setSceneType={setEditType} />
+                    <EditTextSceneTab initialScene={initialTextScene} updateScene={setEditedScene} />
+                    <EditImageSceneTab initialScene={initialImageScene} updateScene={setEditedScene} />
+                    <EditSelectSceneTab initialScene={initialSelectScene} updateScene={setEditedScene} />
+                    <EditManipulateSceneTab initialScene={initialManipulateScene} updateScene={setEditedScene} />
                 </Form>
             </Modal.Body>
             <Modal.Footer>
@@ -960,284 +842,93 @@ function EditTextSceneModal ({ scene, onHide, onSaveAndHide }: { scene: Editable
     );
 }
 
-function EditSelectSceneModal ({ scene, onHide, onSaveAndHide }: { scene: EditableSelectScene | null, onHide: () => void, onSaveAndHide: (scene: EditableSelectScene) => void }) {
-    const [editedText, setEditedText] = useState("");
-    const [editedSqlSol, setEditedSqlSol] = useState("");
-    const [editedIsRowOrderRelevant, setEditedIsRowOrderRelevant] = useState(false);
-    const [editedIsColOrderRelevant, setEditedIsColOrderRelevant] = useState(false);
-    const [editedAreColNamesRelevant, setEditedAreColNamesRelevant] = useState(false);
-    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
-    const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
+function AddSceneModal ({ show, onHide, onSaveAndHide }: { show: boolean, onHide: () => void, onSaveAndHide: (scene: Scene) => void }) {
+    // This state holds the current scene
+    // The following invariant holds:
+    // `show` is false iff `editedScene` is null
+    const [editedScene, setEditedScene] = useState<Scene | null>(null);
 
-    const handleShow = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
+    const [editType, setEditType] = useState<SceneType | null>(null);
 
-        setEditedText(scene.text);
-        setEditedSqlSol(scene.sqlSol);
-        setEditedIsRowOrderRelevant(scene.isRowOrderRelevant);
-        setEditedIsColOrderRelevant(scene.isColOrderRelevant);
-        setEditedAreColNamesRelevant(scene.areColNamesRelevant);
-        setEditedUseSqlPlaceholder(scene.sqlPlaceholder != '');
-        setEditedSqlPlaceholder(scene.sqlPlaceholder);
-    }
+    // This just holds the state for the various tabs
+    // - If `null`: Tab is inactive
+    // - Otherwise: Tab is active 
+    //
+    // The following invariant holds:
+    // If `show` (and `editedScene`) is true, then:
+    // - exactly one of the following is not null and
+    // - all others are null
+    const [initialTextScene, setInitialTextScene] = useState<Scene | null>(null);
+    const [initialImageScene, setInitialImageScene] = useState<Scene | null>(null);
+    const [initialSelectScene, setInitialSelectScene] = useState<Scene | null>(null);
+    const [initialManipulateScene, setInitialManipulateScene] = useState<Scene | null>(null);
+
+    useEffect(() => {
+        if (show) {
+            setEditedScene({ type: 'text', text: 'Hier Text einfügen' });
+            setEditType('text');
+        }
+        else {
+            setEditedScene(null);
+            setEditType(null);
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+    }, [show]);
+
+    useEffect(() => {
+        if (editType == 'text') {
+            setInitialTextScene(editedScene);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'image') {
+            setInitialTextScene(null);
+            setInitialImageScene(editedScene);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'select') {
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(editedScene);
+            setInitialManipulateScene(null);
+        }
+        else if (editType == 'manipulate') {
+            setInitialTextScene(null);
+            setInitialImageScene(null);
+            setInitialSelectScene(null);
+            setInitialManipulateScene(editedScene);
+        }
+    }, [editType]);
 
     const handleSave = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
+        // Assertion holds because the modal is only shown when a scene-to-edit is set
+        assert(editedScene !== null);
 
-        onSaveAndHide({ ...scene, text: editedText, sqlSol: editedSqlSol, sqlPlaceholder: editedSqlPlaceholder, isRowOrderRelevant: editedIsRowOrderRelevant, isColOrderRelevant: editedIsColOrderRelevant, areColNamesRelevant: editedAreColNamesRelevant});
+        onSaveAndHide(editedScene);
     };
 
     return (
-        <EskuelModal className="edit-select-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
-            <Modal.Header closeButton>
-                <Modal.Title>Select-Szene bearbeiten</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form>
-                    <div>
-                        <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
-                        <Form.Control
-                            id='edit-select-scene-text'
-                            as="textarea"
-                            rows={5}
-                            value={editedText}
-                            onChange={(e) => { setEditedText(e.target.value); }} />
-                    </div>
-                    <div>
-                        <label className='mb-2'><strong>SQL-Lösung:</strong></label>
-                        <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
-                    </div>
-                    <div>
-                        <label className='mb-2'><strong>Optionen:</strong></label>
-                        <div className='edit-scene-options'>
-                            <Form.Check
-                                id={'edit-select-scene-is-row-order-relevant'}
-                                type="switch"
-                                checked={editedIsRowOrderRelevant}
-                                onChange={(e) => { setEditedIsRowOrderRelevant(e.target.checked); }}
-                            />
-                            <div>
-                                <label htmlFor={'edit-select-scene-is-row-order-relevant'}>
-                                    Zeilen: Reihenfolge für die Lösung relevant?
-                                </label>
-                            </div>
-                            <Form.Check
-                                id={'edit-select-scene-is-col-order-relevant'}
-                                type="switch"
-                                checked={editedIsColOrderRelevant}
-                                onChange={(e) => { setEditedIsColOrderRelevant(e.target.checked); }}
-                            />
-                            <div>
-                                <label htmlFor={'edit-select-scene-is-col-order-relevant'}>
-                                    Spalten: Reihenfolge für die Lösung relevant?
-                                </label>
-                            </div>
-                            <Form.Check
-                                id={'edit-select-scene-are-col-names-relevant'}
-                                type="switch"
-                                checked={editedAreColNamesRelevant}
-                                onChange={(e) => { setEditedAreColNamesRelevant(e.target.checked); }}
-                            />
-                            <div>
-                                <label htmlFor={'edit-select-scene-are-col-names-relevant'}>
-                                    Spalten: Bezeichnungen für die Lösung relevant?
-                                </label>
-                            </div>
-                            <Form.Check
-                                id={'edit-select-scene-use-sql-placeholder'}
-                                type="switch"
-                                checked={editedUseSqlPlaceholder}
-                                onChange={(e) => {
-                                    if (!e.target.checked) {
-                                        setEditedSqlPlaceholder('');
-                                    }
-                                    setEditedUseSqlPlaceholder(e.target.checked);
-                                }}
-                            />
-                            <div>
-                                <Form.Group>
-                                    <label htmlFor={'edit-select-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
-                                    { editedUseSqlPlaceholder &&
-                                        <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
-                                    }
-                                </Form.Group>
-                            </div>
-                        </div>
-                    </div>
-                </Form>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>
-                    Schließen
-                </Button>
-                <Button variant="primary" onClick={handleSave}>
-                    Speichern
-                </Button>
-            </Modal.Footer>
-        </EskuelModal>
-    );
-}
-
-function EditManipulateSceneModal({ scene, onHide, onSaveAndHide }: { scene: EditableManipulateScene | null, onHide: () => void, onSaveAndHide: (scene: EditableManipulateScene) => void }) {
-    const [editedText, setEditedText] = useState("");
-    const [editedSqlSol, setEditedSqlSol] = useState("");
-    const [editedSqlCheck, setEditedSqlCheck] = useState("");
-    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
-    const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
-
-    const handleShow = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
-
-        setEditedText(scene.text);
-        setEditedSqlSol(scene.sqlSol);
-        setEditedSqlCheck(scene.sqlCheck);
-        setEditedUseSqlPlaceholder(scene.sqlPlaceholder != '');
-        setEditedSqlPlaceholder(scene.sqlPlaceholder);
-    }
-
-    const handleSave = () => {
-        // Assertion holds because the modal is only shown when a text-scene-to-edit is set
-        assert(scene !== null);
-
-        onSaveAndHide({ ...scene, text: editedText, sqlSol: editedSqlSol, sqlCheck: editedSqlCheck, sqlPlaceholder: editedSqlPlaceholder });
-    };
-
-    return (
-        <EskuelModal className="edit-manipulate-scene-modal" show={scene !== null} onHide={onHide} onShow={handleShow} size="lg">
-            <Modal.Header closeButton>
-                <Modal.Title>Manipulate-Szene bearbeiten</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <Form>
-                    <div>
-                        <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
-                        <Form.Control
-                            id='edit-select-scene-text'
-                            as="textarea"
-                            rows={5}
-                            value={editedText}
-                            onChange={(e) => { setEditedText(e.target.value); }} />
-                    </div>
-                    <div>
-                        <label className='mb-2'><strong>SQL-Lösung:</strong></label>
-                        <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
-                    </div>
-                    <div>
-                        <label className='mb-2'><strong>SQL-Check-Abfrage:</strong></label>
-                        <QueryEditor sql={editedSqlCheck} setSql={setEditedSqlCheck} height={100}  />
-                    </div>
-                    <div>
-                        <label className='mb-2'><strong>Optionen:</strong></label>
-                        <div className='edit-scene-options'>
-                            <Form.Check
-                                id={'edit-manipulate-scene-use-sql-placeholder'}
-                                type="switch"
-                                checked={editedUseSqlPlaceholder}
-                                onChange={(e) => {
-                                    if (!e.target.checked) {
-                                        setEditedSqlPlaceholder('');
-                                    }
-                                    setEditedUseSqlPlaceholder(e.target.checked);
-                                }}
-                            />
-                            <div>
-                                <Form.Group>
-                                    <label htmlFor={'edit-manipulate-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
-                                    { editedUseSqlPlaceholder &&
-                                        <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
-                                    }
-                                </Form.Group>
-                            </div>
-                        </div>
-                    </div>
-                </Form>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={onHide}>
-                    Schließen
-                </Button>
-                <Button variant="primary" onClick={handleSave}>
-                    Speichern
-                </Button>
-            </Modal.Footer>
-        </EskuelModal>
-    );
-}
-
-type SceneType = 'text' | 'select' | 'manipulate';
-
-function AddSceneModal({ show, onHide, onSaveAndHide }: { show: boolean, onHide: () => void, onSaveAndHide: (scene: Scene) => void }) {
-    const [sceneType, setSceneType] = useState<SceneType>('text');
-    const [editedText, setEditedText] = useState("");
-
-    const handleShow = () => {
-        setEditedText('');
-        setSceneType('text');
-    }
-
-    const handleSave = () => {
-        const scene: Scene = sceneType === 'text'
-            ? { type: 'text', text: editedText }
-            : sceneType === 'select'
-            ? { type: 'select', text: editedText, sqlSol: '', sqlPlaceholder: '', isRowOrderRelevant: false, isColOrderRelevant: false, areColNamesRelevant: false }
-            : { type: 'manipulate', text: editedText, sqlSol: '', sqlCheck: '', sqlPlaceholder: '' };
-
-        onSaveAndHide(scene);
-    };
-
-    return (
-        <EskuelModal className="edit-manipulate-scene-modal" show={show} onHide={onHide} onShow={handleShow} size="lg">
+        <EskuelModal show={show} onHide={onHide} size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Szene hinzufügen</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form>
-                    <Form.Group>
-                        <Form.Label><strong>Wähle Szenentyp:</strong></Form.Label>
-                        <Form.Check
-                            type="radio"
-                            label="Text"
-                            name="sceneType"
-                            id="text"
-                            value="text"
-                            checked={sceneType === 'text'}
-                            onChange={() => setSceneType('text')}
-                        />
-                        <Form.Check
-                            type="radio"
-                            label="Select"
-                            name="sceneType"
-                            id="select"
-                            value="select"
-                            checked={sceneType === 'select'}
-                            onChange={() => setSceneType('select')}
-                        />
-                        <Form.Check
-                            type="radio"
-                            label="Manipulate"
-                            name="sceneType"
-                            id="manipulate"
-                            value="manipulate"
-                            checked={sceneType === 'manipulate'}
-                            onChange={() => setSceneType('manipulate')}
-                        />
-                    </Form.Group>
-                    <Form.Group>
-                        <Form.Label><strong>Text:</strong></Form.Label>
-                        <Form.Control
-                            as="textarea"
-                            rows={8}
-                            value={editedText}
-                            onChange={(e) => { setEditedText(e.target.value); }} />
-                    </Form.Group>
+                <Form className='form-container'>
+                    <ChooseSceneType sceneType={editType} setSceneType={setEditType} />
+                    <EditTextSceneTab initialScene={initialTextScene} updateScene={setEditedScene} />
+                    <EditImageSceneTab initialScene={initialImageScene} updateScene={setEditedScene} />
+                    <EditSelectSceneTab initialScene={initialSelectScene} updateScene={setEditedScene} />
+                    <EditManipulateSceneTab initialScene={initialManipulateScene} updateScene={setEditedScene} />
                 </Form>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onHide}>
-                    Abbrechen
+                    Schließen
                 </Button>
                 <Button variant="primary" onClick={handleSave}>
                     Hinzufügen
@@ -1247,39 +938,492 @@ function AddSceneModal({ show, onHide, onSaveAndHide }: { show: boolean, onHide:
     );
 }
 
-
-/////////////////
-// Save button //
-/////////////////
-
-function SaveGameAsXMLButton({instance}: {instance: EditorInstance}) {
-    // const handleDownloadXML = () => {
-    //     instance.getGame().then(gameRes => {
-    //         if (gameRes.ok) {
-    //             const game = gameRes.data;
-    //             const xml = gameToXML(game);
-
-    //             // Convert the XML string to a Blob
-    //             const blob = new Blob([xml], { type: 'application/xml' });
-
-    //             // Create a URL for the Blob
-    //             const url = URL.createObjectURL(blob);
-            
-    //             // Create a temporary link to trigger the download
-    //             const link = document.createElement('a');
-    //             link.href = url;
-    //             link.download = 'example.xml'; // Name of the file to be downloaded  //TODO
-    //             document.body.appendChild(link); // Append the link to the document
-    //             link.click(); // Trigger the download
-            
-    //             // Cleanup: remove the link and revoke the Blob URL
-    //             document.body.removeChild(link);
-    //             URL.revokeObjectURL(url);
-    //         }
-    //     });
-    // };
-    
+function ChooseSceneType({ sceneType, setSceneType }: { sceneType: SceneType | null, setSceneType: (sceneType: SceneType) => void }) {
     return (
-        <button onClick={()=>{}}>Download XML</button>
+        <Form.Group className='choose-scene-type'>
+            <Form.Label><strong>Wähle Szenentyp:</strong></Form.Label>
+            <Form.Check
+                inline
+                type="radio"
+                label="Text"
+                name="sceneType"
+                id="text"
+                value="text"
+                checked={sceneType === 'text'}
+                onChange={() => setSceneType('text')}
+            />
+            <Form.Check
+                inline
+                type="radio"
+                label="Image"
+                name="sceneType"
+                id="image"
+                value="image"
+                checked={sceneType === 'image'}
+                onChange={() => setSceneType('image')}
+            />
+            <Form.Check
+                inline
+                type="radio"
+                label="Select"
+                name="sceneType"
+                id="select"
+                value="select"
+                checked={sceneType === 'select'}
+                onChange={() => setSceneType('select')}
+            />
+            <Form.Check
+                inline
+                type="radio"
+                label="Manipulate"
+                name="sceneType"
+                id="manipulate"
+                value="manipulate"
+                checked={sceneType === 'manipulate'}
+                onChange={() => setSceneType('manipulate')}
+            />
+        </Form.Group>
+    );
+}
+
+
+function EditTextSceneTab<T extends Scene>({ initialScene, updateScene }: { initialScene: T | null, updateScene: (scene: T) => void }) {
+    const [editedText, setEditedText] = useState("");
+
+    // Update intial scene every time the `initialScene` prop changes to a
+    // non-null value -> the tab is "shown"
+    useEffect(() => {
+        if (initialScene) {
+            // The given scene may be of some other type. In that case, convert.
+            if (initialScene.type == 'text' || initialScene.type == 'select' || initialScene.type == 'manipulate') {
+                setEditedText(initialScene.text);
+            }
+        }
+    }, [initialScene]);
+
+    // Update scene on:
+    // 1) Initially (possibly after conversion)
+    // 2) User types something
+    useEffect(() => {
+        if (initialScene != null) {
+            updateScene({ ...initialScene, type: 'text', text: editedText });
+        }
+    }, [initialScene, editedText]);
+    
+
+    return (
+        <div style={{ display: initialScene != null ? 'block' : 'none' }}>
+            <div className='form-container'>
+                <Form.Group>
+                    <Form.Label><strong>Text:</strong></Form.Label>
+                    <Form.Control
+                        as="textarea"
+                        rows={8}
+                        value={editedText   }
+                        onChange={(e) => { setEditedText(e.target.value); }} />
+                </Form.Group>
+            </div>
+        </div>
+    );
+}
+
+function EditImageSceneTab<T extends Scene>({ initialScene, updateScene }: { initialScene: T | null, updateScene: (scene: T) => void }) {
+    const [status, setStatus] = useState<LoadImageSourceStatus>({ kind: 'empty' });
+
+    const [showOpenModal, setShowOpenModal ] = useState(false);
+
+    // Update intial scene every time the `initialScene` prop changes to a
+    // non-null value -> the tab is "shown"
+    useEffect(() => {
+        if (initialScene && initialScene.type == 'image') {
+            setStatus({ kind: 'loaded', data: initialScene.base64string} );
+        }
+    }, [initialScene]);
+
+    // Update scene on:
+    // 1) Initially (possibly after conversion)
+    // 2) User uploads successfully a new image
+    useEffect(() => {
+        if (initialScene != null && status.kind === 'loaded') {
+            updateScene({ ...initialScene, type: 'image', base64string: status.data });
+        }
+    }, [initialScene, status]);
+
+    const onSelect = (source: ImageSource) => {
+        // Materialize
+        const data = materializeBinarySource(source);
+
+        data.then((dataRes) => {
+            // Is image fetched correctly?
+            if (!dataRes.ok) {
+                setStatus({ kind: 'failed', error: dataRes.error });
+            }
+            else {
+                // Is file size within 500KB?
+                if (dataRes.data.length > 500*1024) {
+                    setStatus({ kind: 'failed', error: { kind: 'file-size-too-large' } });
+                }
+                else {
+                    // Is PNG file valid? Use image-type.
+                    const image = new Image();
+                    image.src = URL.createObjectURL(new Blob([dataRes.data], { type: 'image/png' }));
+
+                    // If not, place failure
+                    image.onerror = () => {
+                        setStatus({ kind: 'failed', error: { kind: 'png-file-invalid' } });
+                    };
+                    image.onload = () => {
+                        // Convert to base64
+                        const base64string = encodeToBase64(dataRes.data);
+                        setStatus({ kind: 'loaded', data: base64string });
+                    };
+                }
+            }
+        });
+    };
+
+    return (
+        <>
+            <div style={{ display: initialScene != null ? 'block' : 'none' }}>
+                <div className='form-container'>
+                    <LoadImageSourcePanel status={status} setSource={onSelect} />
+                    {
+                        status.kind == 'loaded' && (
+                            <UserImage base64string={status.data} /> 
+                        )
+                    }
+                </div>
+            </div>
+            <OpenImageSourceModal
+                providedFileSources={[]}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+                onOpenFile={onSelect}
+            />
+        </>
+    );
+}
+
+function EditSelectSceneTab<T extends Scene>({ initialScene, updateScene }: { initialScene: T | null, updateScene: (scene: T) => void }) {
+    const [editedText, setEditedText] = useState("");
+    const [editedSqlSol, setEditedSqlSol] = useState("");
+    const [editedIsRowOrderRelevant, setEditedIsRowOrderRelevant] = useState(false);
+    const [editedIsColOrderRelevant, setEditedIsColOrderRelevant] = useState(false);
+    const [editedAreColNamesRelevant, setEditedAreColNamesRelevant] = useState(false);
+    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
+    const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
+
+    // Update intial scene every time the `scene` prop changes -> the tab is "shown"
+    useEffect(() => {
+        if (initialScene) {
+            // The given scene may be of some other type. In that case, convert.
+            if (initialScene.type == 'text') {
+                setEditedText(initialScene.text);
+            }
+            else if (initialScene.type == 'select') {
+                setEditedText(initialScene.text);
+                setEditedSqlSol(initialScene.sqlSol);
+                setEditedIsRowOrderRelevant(initialScene.isRowOrderRelevant);
+                setEditedIsColOrderRelevant(initialScene.isColOrderRelevant);
+                setEditedAreColNamesRelevant(initialScene.areColNamesRelevant);
+                setEditedUseSqlPlaceholder(initialScene.sqlPlaceholder != '');
+                setEditedSqlPlaceholder(initialScene.sqlPlaceholder);    
+            }
+            else if (initialScene.type == 'manipulate') {
+                setEditedText(initialScene.text);
+                setEditedSqlSol(initialScene.sqlSol);
+                setEditedUseSqlPlaceholder(initialScene.sqlPlaceholder != '');
+                setEditedSqlPlaceholder(initialScene.sqlPlaceholder);    
+            }
+        }
+    }, [initialScene]);
+
+    // Update scene on:
+    // 1) Initially (possibly after conversion)
+    // 2) User types something
+    useEffect(() => {
+        if (initialScene != null) {
+            updateScene({ ...initialScene, type: 'select', text: editedText, sqlSol: editedSqlSol, sqlPlaceholder: editedSqlPlaceholder, isRowOrderRelevant: editedIsRowOrderRelevant, isColOrderRelevant: editedIsColOrderRelevant, areColNamesRelevant: editedAreColNamesRelevant });
+        }
+
+    }, [initialScene, editedText, editedSqlSol, editedIsRowOrderRelevant, editedIsColOrderRelevant, editedAreColNamesRelevant, editedSqlPlaceholder]);
+
+    return (
+        <div style={{ display: initialScene != null ? 'block' : 'none' }}>
+            <div className='form-container'>
+                <div>
+                    <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
+                    <Form.Control
+                        id='edit-select-scene-text'
+                        as="textarea"
+                        rows={5}
+                        value={editedText}
+                        onChange={(e) => { setEditedText(e.target.value); }} />
+                </div>
+                <div>
+                    <label className='mb-2'><strong>SQL-Lösung:</strong></label>
+                    <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
+                </div>
+                <div>
+                    <label className='mb-2'><strong>Optionen:</strong></label>
+                    <div className='edit-scene-options'>
+                        <Form.Check
+                            id={'edit-select-scene-is-row-order-relevant'}
+                            type="switch"
+                            checked={editedIsRowOrderRelevant}
+                            onChange={(e) => { setEditedIsRowOrderRelevant(e.target.checked); }}
+                        />
+                        <div>
+                            <label htmlFor={'edit-select-scene-is-row-order-relevant'}>
+                                Zeilen: Reihenfolge für die Lösung relevant?
+                            </label>
+                        </div>
+                        <Form.Check
+                            id={'edit-select-scene-is-col-order-relevant'}
+                            type="switch"
+                            checked={editedIsColOrderRelevant}
+                            onChange={(e) => { setEditedIsColOrderRelevant(e.target.checked); }}
+                        />
+                        <div>
+                            <label htmlFor={'edit-select-scene-is-col-order-relevant'}>
+                                Spalten: Reihenfolge für die Lösung relevant?
+                            </label>
+                        </div>
+                        <Form.Check
+                            id={'edit-select-scene-are-col-names-relevant'}
+                            type="switch"
+                            checked={editedAreColNamesRelevant}
+                            onChange={(e) => { setEditedAreColNamesRelevant(e.target.checked); }}
+                        />
+                        <div>
+                            <label htmlFor={'edit-select-scene-are-col-names-relevant'}>
+                                Spalten: Bezeichnungen für die Lösung relevant?
+                            </label>
+                        </div>
+                        <Form.Check
+                            id={'edit-select-scene-use-sql-placeholder'}
+                            type="switch"
+                            checked={editedUseSqlPlaceholder}
+                            onChange={(e) => {
+                                if (!e.target.checked) {
+                                    setEditedSqlPlaceholder('');
+                                }
+                                setEditedUseSqlPlaceholder(e.target.checked);
+                            }}
+                        />
+                        <div>
+                            <Form.Group>
+                                <label htmlFor={'edit-select-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
+                                { editedUseSqlPlaceholder &&
+                                    <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
+                                }
+                            </Form.Group>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EditManipulateSceneTab<T extends Scene>({ initialScene, updateScene }: { initialScene: T | null, updateScene: (scene: T) => void }) {
+    const [editedText, setEditedText] = useState("");
+    const [editedSqlSol, setEditedSqlSol] = useState("");
+    const [editedSqlCheck, setEditedSqlCheck] = useState("");
+    const [editedUseSqlPlaceholder, setEditedUseSqlPlaceholder] = useState(false);
+    const [editedSqlPlaceholder, setEditedSqlPlaceholder] = useState("");
+
+    // Update intial scene every time the `scene` prop changes -> the tab is "shown"
+    useEffect(() => {
+        if (initialScene) {
+            // The given scene may be of some other type. In that case, convert.
+            if (initialScene.type == 'text') {
+                setEditedText(initialScene.text);
+            }
+            else if (initialScene.type == 'select') {
+                setEditedText(initialScene.text);
+                setEditedSqlSol(initialScene.sqlSol);
+                setEditedUseSqlPlaceholder(initialScene.sqlPlaceholder != '');
+                setEditedSqlPlaceholder(initialScene.sqlPlaceholder);    
+            }
+            else if (initialScene.type == 'manipulate') {
+                setEditedText(initialScene.text);
+                setEditedSqlSol(initialScene.sqlSol);
+                setEditedSqlCheck(initialScene.sqlCheck);
+                setEditedUseSqlPlaceholder(initialScene.sqlPlaceholder != '');
+                setEditedSqlPlaceholder(initialScene.sqlPlaceholder);    
+            }
+        }
+    }, [initialScene]);
+
+    // Update scene on:
+    // 1) Initially (possibly after conversion)
+    // 2) User types something
+    useEffect(() => {
+        if (initialScene != null) {
+            updateScene({ ...initialScene, type: 'manipulate', text: editedText, sqlSol: editedSqlSol, sqlCheck: editedSqlCheck, sqlPlaceholder: editedSqlPlaceholder });
+        }
+    }, [initialScene, editedText, editedSqlSol, editedSqlCheck, editedSqlPlaceholder]);
+
+    return (
+        <div style={{ display: initialScene != null ? 'block' : 'none' }}>
+            <div className='form-container'>
+                <div>
+                    <label htmlFor={'edit-select-scene-text'} className='mb-2'><strong>Text:</strong></label>
+                    <Form.Control
+                        id='edit-select-scene-text'
+                        as="textarea"
+                        rows={5}
+                        value={editedText}
+                        onChange={(e) => { setEditedText(e.target.value); }} />
+                </div>
+                <div>
+                    <label className='mb-2'><strong>SQL-Lösung:</strong></label>
+                    <QueryEditor sql={editedSqlSol} setSql={setEditedSqlSol} height={100}  />
+                </div>
+                <div>
+                    <label className='mb-2'><strong>SQL-Check-Abfrage:</strong></label>
+                    <QueryEditor sql={editedSqlCheck} setSql={setEditedSqlCheck} height={100}  />
+                </div>
+                <div>
+                    <label className='mb-2'><strong>Optionen:</strong></label>
+                    <div className='edit-scene-options'>
+                        <Form.Check
+                            id={'edit-manipulate-scene-use-sql-placeholder'}
+                            type="switch"
+                            checked={editedUseSqlPlaceholder}
+                            onChange={(e) => {
+                                if (!e.target.checked) {
+                                    setEditedSqlPlaceholder('');
+                                }
+                                setEditedUseSqlPlaceholder(e.target.checked);
+                            }}
+                        />
+                        <div>
+                            <Form.Group>
+                                <label htmlFor={'edit-manipulate-scene-use-sql-placeholder'} className='mb-2'>Platzhalter für die Eingabe in das Abfragefeld</label>
+                                { editedUseSqlPlaceholder &&
+                                    <QueryEditor sql={editedSqlPlaceholder} setSql={setEditedSqlPlaceholder} height={100}  />
+                                }
+                            </Form.Group>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+//////////////////////////////////
+// Open and load game db source //
+//////////////////////////////////
+
+export type LoadGameDbWidgetStatusEmpty   = { kind: 'empty' };
+export type LoadGameDbWidgetStatusPending = { kind: 'pending' };
+export type LoadGameDbWidgetStatusLoaded  = { kind: 'loaded', data: Schema };
+export type LoadGameDbWidgetStatusFailed  = { kind: 'failed', error: FetchDbFail | InitDbFail | ParseSchemaFail };
+export type LoadGameDbWidgetStatus = LoadGameDbWidgetStatusEmpty | LoadGameDbWidgetStatusPending | LoadGameDbWidgetStatusLoaded | LoadGameDbWidgetStatusFailed;
+
+function loadGameDbWidgetStatusToLoadingStatus(status: LoadGameDbWidgetStatus): LoadingStatus {
+    if (status.kind === 'empty') {
+        return { kind: 'empty' };
+    }
+    else if (status.kind === 'pending') {
+        return { kind: 'pending' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'fetch-db') {
+        return { kind: 'failed', error: 'Fehler beim Laden der Datenbank-Datei' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'run-init-script') {
+        return { kind: 'failed', error: 'Fehler beim Initialisieren: ' + status.error.details };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'read-sqlite-db') {
+        return { kind: 'failed', error: 'Fehler beim Lesen der Datenbank: ' + status.error.details };
+    } 
+    else if (status.kind === 'failed' && status.error.kind === 'parse-schema') {
+        return { kind: 'failed', error: 'Fehler beim Lesen des Schemas: ' + status.error.details };
+    }
+    else {
+        return { kind: 'loaded' };
+    }
+};
+
+function LoadGameDbSourceWidget({status, setSource}: {status: LoadGameDbWidgetStatus, setSource: (source: DbSource) => void}) {
+
+    const [showOpenModal, setShowOpenModal ] = useState(false);
+
+    return (
+        <>
+            <div>
+                <MultiWidget className={'widget-dbsource'} title={'Datenbank'}>
+                    <LoadingBarWithOpenButton setShowOpenModal={setShowOpenModal} tooltipText='Datenbank laden' status={loadGameDbWidgetStatusToLoadingStatus(status)} />
+                    {
+                        status.kind === 'loaded' && (
+                            <div className='widget-dbsource-schema'>
+                                <SchemaView schema={status.data} />
+                            </div>
+                        )
+                    }
+                </MultiWidget>
+            </div>
+            <OpenDbSourceModal
+                providedFileSources={[]}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+                onOpenFile={setSource}
+            />
+        </>
+    );
+}
+
+
+////////////////////////////////
+// Open and load image source //
+////////////////////////////////
+
+export type LoadImageSourceStatusEmpty   = { kind: 'empty' };
+export type LoadImageSourceStatusPending = { kind: 'pending' };
+export type LoadImageSourceStatusLoaded  = { kind: 'loaded', data: string };
+export type LoadImageSourceStatusFailed  = { kind: 'failed', error: UserImageFail };
+export type LoadImageSourceStatus = LoadImageSourceStatusEmpty | LoadImageSourceStatusPending | LoadImageSourceStatusLoaded | LoadImageSourceStatusFailed;
+
+const loadImageSourceStatusToLoadingStatus = function (status: LoadImageSourceStatus): LoadingStatus {
+    if (status.kind === 'empty') {
+        return { kind: 'empty' };
+    }
+    else if (status.kind === 'pending') {
+        return { kind: 'pending' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'fetch') {
+        return { kind: 'failed', error: 'Fehler beim Laden der Datei' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'file-size-too-large') {
+        return { kind: 'failed', error: 'Dateigröße überschreitet Limit' };
+    }
+    else if (status.kind === 'failed' && status.error.kind === 'png-file-invalid') {
+        return { kind: 'failed', error: 'Datei entspricht nicht PNG-Dateiformat' };
+    }
+    else {
+        return { kind: 'loaded' };
+    }
+};
+
+function LoadImageSourcePanel({status, setSource}: {status: LoadImageSourceStatus, setSource: (source: ImageSource) => void}) {
+
+    const [showOpenModal, setShowOpenModal ] = useState(false);
+
+    return (
+        <>
+            <div>
+                <LoadingBarWithOpenButton setShowOpenModal={setShowOpenModal} tooltipText='Bild laden' status={loadImageSourceStatusToLoadingStatus(status)} />
+            </div>
+            <OpenImageSourceModal
+                providedFileSources={[]}
+                show={showOpenModal}
+                setShow={setShowOpenModal}
+                onOpenFile={setSource}
+            />
+        </>
     );
 }

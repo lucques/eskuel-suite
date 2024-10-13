@@ -33,9 +33,9 @@ import './screen.css';
 import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
 import { assert } from "./util";
-import { GameInstance, Status } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, SchemaStatus } from './game-pure';
-import { ClickableIcon, QueryEditor, ResultTableView, SchemaView, Widget } from './react';
+import { GameInstance } from './game-engine-instance';
+import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, SchemaStatus, GameInitStatus, gameInitStatusToLoadingStatus, schemaStatusToLoadingStatus } from './game-pure';
+import { ClickableIcon, LoadingBar, QueryEditor, ResultTableView, SchemaView, UserImage, Widget } from './react';
 
 export { Game } from './game-pure';
 
@@ -85,9 +85,9 @@ export function GameInstanceView({instance}: {instance: GameInstance}) {
 
     //////////////////////////////////////
     // Explicitly track instance status //
-    /////////////////////////////////////
+    //////////////////////////////////////
 
-    const [status, setStatus] = useState<Status>(instance.getStatus());
+    const [status, setStatus] = useState<GameInitStatus>(instance.getStatus());
     const updateStatus = () => { setStatus(instance.getStatus()); }
 
 
@@ -270,12 +270,12 @@ export function GameInstanceView({instance}: {instance: GameInstance}) {
     }
     else {
         return (
-            <StatusView status={status} />
+            <LoadingBar status={gameInitStatusToLoadingStatus(status)} />
         );
     }
 }
 
-function StatusView({status}: {status: Status}) {
+function StatusView({status}: {status: GameInitStatus}) {
     if (status.kind === 'pending') {
         return (
             <Alert className="status-view" variant="info">
@@ -333,9 +333,7 @@ function SceneWithNextButtonView({scene, nextButtonDisabled, onNextScene}: {scen
     if (scene.type == 'image') {
         return (
             <>
-                <div className="text-center">
-                    <img src={'data:image/png;base64,' + scene.base64string} alt="" />
-                </div>
+                <UserImage base64string={scene.base64string} /> 
                 <div className="text-center">
                     <Button onClick={onNextScene} disabled={nextButtonDisabled}>Weiter</Button>
                 </div>
@@ -357,9 +355,7 @@ function SceneWithNextButtonView({scene, nextButtonDisabled, onNextScene}: {scen
 function SceneView({scene}: {scene: Scene}) {
     if (scene.type == 'image') {
         return (
-            <div className="text-center">
-                <img src={'data:image/png;base64,' + scene.base64string} alt="" />
-            </div>
+            <UserImage base64string={scene.base64string} /> 
         );
     }
     else {
@@ -376,21 +372,21 @@ interface RenderWithLineBreaksProps {
     text: string;
   }
   
-  const RenderWithLineBreaks: React.FC<RenderWithLineBreaksProps> = ({ text }) => {
+const RenderWithLineBreaks: React.FC<RenderWithLineBreaksProps> = ({ text }) => {
     // Split text on newlines
     const parts = text.split('\n');
-  
+
     return (
-      <>
+        <>
         {parts.map((part, index) => (
-          <React.Fragment key={index}>
+            <React.Fragment key={index}>
             {part}
             {index !== parts.length - 1 && <br />}
-          </React.Fragment>
+            </React.Fragment>
         ))}
-      </>
+        </>
     );
-  };
+};
 
 
 function QueryWidget({game, s, onSubmit, onResetDbInCurScene, onShowHint}: {game: Game, s: GameState, onSubmit: () => void, onResetDbInCurScene: () => void, onShowHint: () => void}) {
@@ -432,7 +428,7 @@ function SchemaWidget({instance}: {instance: GameInstance}) {
             }
             // Failed to parse
             else {
-                // Assertion holds because inst status must be "active"
+                // Assertion holds because schema widget is only visible when db is active
                 assert(schemaResult.error.kind === 'parse-schema');
 
                 setSchemaStatus({ kind: 'failed', error: schemaResult.error });
@@ -443,13 +439,11 @@ function SchemaWidget({instance}: {instance: GameInstance}) {
     return (
         <Widget className={'widget-schema'} title={'Schema'}>
             {
-                schemaStatus.kind === 'pending' ? (
-                    <p className='schema-status'>Lade...</p>
-                )
-                : schemaStatus.kind === 'failed' ? (
-                    <p className='schema-status'>Fehler beim Einlesen des Schemas: {schemaStatus.error.details}</p>
-                )
-                :
+                schemaStatus.kind != 'loaded' &&
+                    <LoadingBar status={schemaStatusToLoadingStatus(schemaStatus)} />
+            }
+            {
+                schemaStatus.kind === 'loaded' &&
                     <SchemaView schema={schemaStatus.data} />
             }
         </Widget>
