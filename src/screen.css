@@ -428,6 +428,13 @@
 /* Colors */
 /**********/
 
+
+.eskuel .clickable-icon-button {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: black;
+}
+
+
 .eskuel .app-browser .header-name  {
     background-color: rgb(155, 184, 205);
 }

@@ -35,12 +35,12 @@ const customStyle = {
 import './screen.css';
 
 
-import { DbSource, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
+import { DbData, DbSource, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { Schema } from './schema';
 import { Fail, FetchFail, ImageSource, Named, Source, Success, UserImageFail, assert, encodeToBase64, materializeBinarySource, reorder } from "./util";
 import { GameInstance } from './game-engine-instance';
 import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, ImageScene, GameSource, createBlankGame, GameInitStatus, gameInitStatusToLoadingStatus as gameInitStatusToLoadingStatus } from './game-pure';
-import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbSourceModal, OpenSourceModal, OpenGameSourceModal, OpenImageSourceModal, QueryEditor, ResultTableView, SchemaView, UserImage, Widget, LoadingBarWithOpenButton, LoadingStatus, LoadingBar } from './react';
+import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbSourceModal, OpenSourceModal, OpenGameSourceModal, OpenImageSourceModal, QueryEditor, ResultTableView, SchemaView, UserImage, Widget, LoadingBarWithOpenButton, LoadingStatus, LoadingBar, LoadingBarWithOpenSaveButton } from './react';
 import { EditorInstance } from './game-editor-instance';
 import { BrowserInstance } from './browser-instance';
 import { initial } from 'lodash';
@@ -321,7 +321,7 @@ export function EditorInstanceView({instance, status}: {instance: EditorInstance
                     setLoadGameDbWidgetStatus({ kind: 'empty' });
                 }
                 else {
-                    setLoadGameDbWidgetStatus({ kind: 'loaded', data: schemaResult.data });
+                    setLoadGameDbWidgetStatus({ kind: 'loaded', schema: schemaResult.data, dbData: gameResult.data.dbData });
                 }
             }
             // Fail
@@ -1321,7 +1321,7 @@ function EditManipulateSceneTab<T extends Scene>({ initialScene, updateScene }: 
 
 export type LoadGameDbWidgetStatusEmpty   = { kind: 'empty' };
 export type LoadGameDbWidgetStatusPending = { kind: 'pending' };
-export type LoadGameDbWidgetStatusLoaded  = { kind: 'loaded', data: Schema };
+export type LoadGameDbWidgetStatusLoaded  = { kind: 'loaded', schema: Schema, dbData: DbData };
 export type LoadGameDbWidgetStatusFailed  = { kind: 'failed', error: FetchDbFail | InitDbFail | ParseSchemaFail };
 export type LoadGameDbWidgetStatus = LoadGameDbWidgetStatusEmpty | LoadGameDbWidgetStatusPending | LoadGameDbWidgetStatusLoaded | LoadGameDbWidgetStatusFailed;
 
@@ -1353,15 +1353,50 @@ function LoadGameDbSourceWidget({status, setSource}: {status: LoadGameDbWidgetSt
 
     const [showOpenModal, setShowOpenModal ] = useState(false);
 
+    const onSave = () => {
+        if (status.kind === 'loaded') {
+            if (status.dbData.type === 'sqlite-db') {
+                const blob = new Blob([status.dbData.data], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+
+                // Create a temporary link to trigger the download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'datenbank.db'; // Name of the file to be downloaded  //TODO
+                document.body.appendChild(link); // Append the link to the document
+                link.click(); // Trigger the download
+
+                // Cleanup: remove the link and revoke the Blob URL
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            else {
+                const blob = new Blob([status.dbData.sql], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+
+                // Create a temporary link to trigger the download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'datenbank.sql'; // Name of the file to be downloaded  //TODO
+                document.body.appendChild(link); // Append the link to the document
+                link.click(); // Trigger the download
+
+                // Cleanup: remove the link and revoke the Blob URL
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+    };
+
     return (
         <>
             <div>
                 <MultiWidget className={'widget-dbsource'} title={'Datenbank'}>
-                    <LoadingBarWithOpenButton setShowOpenModal={setShowOpenModal} tooltipText='Datenbank laden' status={loadGameDbWidgetStatusToLoadingStatus(status)} />
+                    <LoadingBarWithOpenSaveButton setShowOpenModal={setShowOpenModal} tooltipText='Datenbank laden' status={loadGameDbWidgetStatusToLoadingStatus(status)} onSave={onSave} saveTooltipText='Datenbank herunterladen' />
                     {
                         status.kind === 'loaded' && (
                             <div className='widget-dbsource-schema'>
-                                <SchemaView schema={status.data} />
+                                <SchemaView schema={status.schema} />
                             </div>
                         )
                     }

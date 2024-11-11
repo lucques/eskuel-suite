@@ -571,7 +571,7 @@ export function OpenImageSourceModal({ show, setShow, providedFileSources, onOpe
 }) {
     return (
         <OpenSourceModal
-            title="Bild laden"
+            title="Bild laden (Dateigröße max. 50KB)"
             fileUploadTitle='Bild hochladen'
             fileIconTypes={['file-png']}
             fileAccept='.png'
@@ -683,6 +683,48 @@ export function LoadingBarWithOpenButton( { setShowOpenModal, tooltipText, statu
                     <Alert className="load-source-panel-status flex-fill" variant="danger">
                         {status.error}
                     </Alert>
+            }
+        </div>
+    );
+}
+
+export function LoadingBarWithOpenSaveButton( { setShowOpenModal, tooltipText, status, onSave, saveTooltipText }: { setShowOpenModal: (value: boolean) => void, tooltipText: string, status: LoadingStatus, onSave: () => void, saveTooltipText: string } ) {
+    return (
+        <div className='d-flex col-gap-default'>
+            <div>
+                <IconActionButton type='open' onClick={() => setShowOpenModal(true)} tooltipText={tooltipText} />
+            </div>
+            {
+                status.kind === 'empty' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Nichts geladen
+                    </Alert>
+            }
+            {
+                status.kind === 'pending' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="info">
+                        Lädt...
+                    </Alert>
+
+            }
+            {
+                status.kind === 'loaded' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="success">
+                        Geladen
+                    </Alert>
+
+            }
+            {
+                status.kind === 'failed' &&
+                    <Alert className="load-source-panel-status flex-fill" variant="danger">
+                        {status.error}
+                    </Alert>
+            }
+            {
+                status.kind === 'loaded' &&
+                    <div>
+                        <IconActionButton type='save' onClick={onSave} tooltipText={saveTooltipText} />
+                    </div>
             }
         </div>
     );

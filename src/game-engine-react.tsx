@@ -576,7 +576,11 @@ function GameResultHintManipulateView({checkResult, onClose}: {checkResult: SqlR
                 <ResultViewHeader bsVariant="info" title={<em>Tipp</em>} onClose={onClose} />
                 <ListGroup.Item className="bg-info bg-opacity-25 border-info">
                     <p>
-                        Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter> das folgende Ergebnis liefert:
+                        Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage
+                    </p>
+                    <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter>
+                    <p>
+                        das folgende Ergebnis liefert:
                     </p>
                 </ListGroup.Item>
                 {checkResult.result.length === 0 ? <ListGroup.Item className='text-center'><em>(Ergebnis enthält keine Zeilen)</em></ListGroup.Item> : null}
@@ -590,7 +594,11 @@ function GameResultHintManipulateView({checkResult, onClose}: {checkResult: SqlR
                 <ResultViewHeader bsVariant="info" title={<em>Tipp</em>} onClose={onClose} />
                 <ListGroup.Item className="bg-info bg-opacity-25 border-info">
                     <p>
-                        Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter> das folgende Ergebnis liefert:
+                        Tipp: Die Datenbank muss so manipuliert werden, dass die Abfrage
+                    </p>
+                    <SyntaxHighlighter language="sql">{checkResult.sql}</SyntaxHighlighter>
+                    <p>
+                        das folgende Ergebnis liefert:
                     </p>
                 </ListGroup.Item>
                 <ListGroup.Item className={classNames('result-view-explanation', 'bg-info', 'bg-opacity-25', 'border-info')}>

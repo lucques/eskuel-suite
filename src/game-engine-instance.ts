@@ -494,7 +494,6 @@ export class GameInstance {
         const internalState = internalStateRes.data;
 
         if (internalState.curReferenceCheckResults === null) {
-
             const curScene = game.getCurScene(internalState.gameState);
 
             // Assertions
@@ -643,17 +642,23 @@ export class GameInstance {
             return Promise.resolve({ ok: false, error: refDbRes.error });
         }
 
+        // State
+        const state = {
+            userDb: userDb,
+            refDb: refDb,
+            gameState: game.freshState(),
+            curReferenceSolutionResults: null,
+            curReferenceCheckResults: null
+        };
+
+        // If "manipulate" scene: Manipulate ref db
+        const newScene = game.getCurScene(state.gameState);
+        if (newScene.type === 'manipulate') {
+            // Manipulate `refDb`: Results don't matter, even an error is permitted.
+            await state.refDb.exec(newScene.sqlSol);
+        }
 
         // Success
-        return Promise.resolve({
-            ok: true,
-            data: {
-                userDb: userDb,
-                refDb: refDb,
-                gameState: game.freshState(),
-                curReferenceSolutionResults: null,
-                curReferenceCheckResults: null
-            }
-        });
+        return Promise.resolve({ok: true, data: state});
     }
 }
