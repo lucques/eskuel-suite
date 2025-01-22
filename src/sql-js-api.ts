@@ -1,8 +1,7 @@
 // sql.js library
-import initSqlJs from 'sql.js';
-// This object is configured and provided already in the global context
-declare const sqlJs: Promise<initSqlJs.SqlJsStatic>;
+import initSqlJs from "sql.js";
 
+const sqlJs: Promise<initSqlJs.SqlJsStatic> = initSqlJs();
 
 // Local
 import { Fail, Source, getFilenameExtension, getFilenameWithoutExtension, Success, Named, assert } from './util';
@@ -25,7 +24,6 @@ export type ReadSqliteDbFail  = { kind: 'read-sqlite-db', details: string }
 export type InitDbFail        = RunInitScriptFail | ReadSqliteDbFail
 
 export type ParseSchemaFail   = { kind: 'parse-schema', details: string };
-
 
 /**
  * Terminology:
