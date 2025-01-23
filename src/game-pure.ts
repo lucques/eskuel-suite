@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { Fail, Source, Success, assert, decodeFromBase64, encodeToBase64, isFail, isSuccess } from './util';
-import { DbData, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from './sql-js-api';
+import { DbData, InitDbFail, ParseSchemaFail, SqlResult } from './sql-js-api';
 import { Schema } from './schema';
 
 import * as he from 'he';

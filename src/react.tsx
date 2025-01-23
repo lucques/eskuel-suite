@@ -3,8 +3,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, Button, Card, Form, FormCheck, ListGroup, ListGroupItem, Modal, ModalProps, OverlayTrigger, Table, Tooltip, TooltipProps } from "react-bootstrap";
 import { ColInfo, Schema, TableInfo } from "./schema";
 import { SqlValue } from "sql.js";
-import { FetchFail, ImageSource, Named, Source, assert, getFilenameExtension, getFilenameWithoutExtension } from "./util";
-import { Alarm, ArrowsAngleExpand, FileEarmark, FileEarmarkPlus, FiletypePng, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
+import { ImageSource, Named, assert, getFilenameExtension, getFilenameWithoutExtension } from "./util";
+import { ArrowsAngleExpand, FileEarmarkPlus, FiletypePng, FiletypeSql, FiletypeXml, Folder2Open, HouseDoor, Pencil, PlusCircle, Save, X } from 'react-bootstrap-icons';
 import { GameSource } from "./game-pure";
 
 import filetypeDbUrl from './assets/filetype-db.svg';

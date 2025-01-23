@@ -2,8 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App';
-import { MultiEditorComponentView } from './game-editor-react';
-import { makeNamedDbSource } from './sql-js-api';
 import BrowserPage from './BrowserPage';
 import GameConsolePage from './GameConsolePage';
 import GameEditorPage from './GameEditorPage';

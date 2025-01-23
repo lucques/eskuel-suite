@@ -1,37 +1,18 @@
-// React
 import React, { useEffect, useState } from 'react';
-
-// React-Bootstrap
-import { Alert, Button, Card, CloseButton, Form, ListGroup, Modal, Table} from 'react-bootstrap';
-
-// classnames
-import classNames from 'classnames';
-
-// react-grid-layout
+import { Button, CloseButton, ListGroup } from 'react-bootstrap';
 import GridLayout from "react-grid-layout";
+import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { BrowserInstance, Status, statusToLoadingStatus } from './browser-instance';
+import { SqlResult, sqlResultHash, DbSource } from "./sql-js-api";
+import { Named, assert } from "./util";
+import { Widget, ResultTableView, ClickableIcon, IconActionButton, IconLinkButton, SchemaView, QueryEditor, OpenDbSourceModal, LoadingBar } from './react';
+import { SchemaStatus, schemaStatusToLoadingStatus } from './game-pure';
+
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-
-// react-tabs
-import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
-
-// react-syntax-highlighter
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-
-// Custom CSS
 import './screen.css';
-
-// Local
-import { ColInfo, Schema, TableInfo } from './schema';
-import { BrowserInstance, Status, statusToLoadingStatus } from './browser-instance';
-import { RunInitScriptFail, FetchDbFail, SqlResult, ParseSchemaFail, sqlResultHash, DbSource, ReadSqliteDbFail } from "./sql-js-api";
-
-import { Named, Source, assert } from "./util";
-import { Widget, ResultTableView, ClickableIcon, OpenSourceModal, IconActionButton, IconLinkButton, Icon, SchemaView, QueryEditor, OpenDbSourceModal, LoadingStatus, LoadingBar } from './react';
-import { SchemaStatus, schemaStatusToLoadingStatus } from './game-pure';
-import { LoadGameDbWidgetStatus } from './game-editor-react';
-
 
 //////////////////////
 // React components //

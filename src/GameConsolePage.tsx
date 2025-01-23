@@ -1,7 +1,6 @@
 import React from 'react';
 import { GameConsoleView } from './console-react';
 import { getFilenameWithoutExtension, Named } from './util';
-import { makeNamedDbSource } from './sql-js-api';
 import { GameSource } from './game-pure';
 
 function GameConsolePage() {

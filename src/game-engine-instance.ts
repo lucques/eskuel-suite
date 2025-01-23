@@ -1,8 +1,7 @@
 import { Game, LoadGameFail, GameState, xmlToGame, areResultsEqual, GameResult, GameResultCorrect, GameResultMiss, FetchXMLFail, GameSource, GameInitStatus } from './game-pure';
-import { FetchDbFail, InitDbFail, ParseSchemaFail, RunInitScriptFail, SqlResult, StaticDb } from './sql-js-api';
-import { Fail, Source, Success, assert, generateId } from './util';
+import { InitDbFail, ParseSchemaFail, SqlResult, StaticDb } from './sql-js-api';
+import { Fail, Success, assert, generateId } from './util';
 import { Schema } from './schema';
-import { LoadingStatus } from './react';
 
 
 // Terminology:
