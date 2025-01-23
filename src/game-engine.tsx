@@ -45,40 +45,6 @@ export { Game } from './game-pure';
 // Exported class for use //
 ////////////////////////////
 
-export class GameConsoleComponent {
-
-    private fileSources: Named<GameSource>[] = [];
-    private initialFileSource?: Named<GameSource>;
-
-    constructor(readonly divId: string, url?: string, readonly initiallySkipFirstScenes?: number) {
-        if (url !== undefined) {
-            this.initialFileSource = { type: 'xml', source: { type: 'fetch', url: url }, name: getFilenameWithoutExtension(url)};
-        }
-    }
-
-    addUrl(url: string) {
-        const name = getFilenameWithoutExtension(url);
-
-        this.fileSources.push({ type: 'xml', source: { type: 'fetch', url}, name });
-    }
-
-    init() {
-        const div = document.getElementById(this.divId);
-        assert(div !== null, `Element with id ${this.divId} not found`);
-
-        const root = createRoot(div);
-        root.render(
-            <React.StrictMode>
-                <div className='eskuel'>
-                    <div className='app-game-console'>
-                        <GameConsoleView fileSources={this.fileSources} initialFileSource={this.initialFileSource} initiallySkipFirstScenes={this.initiallySkipFirstScenes} />
-                    </div>
-                </div>
-            </React.StrictMode>
-        );
-    }
-}
-
 export class GameComponent {
     private instance: GameInstance;
 

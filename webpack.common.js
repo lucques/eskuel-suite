@@ -1,10 +1,11 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: {
-    "eskuel-suite": './src/index.ts'
+    "eskuel-suite": './src/index.tsx'
   },
   module: {
     rules: [
@@ -40,31 +41,25 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './public/browser.html',
-      filename: 'browser.html',
-    }),
-    new HtmlWebpackPlugin({
-      template: './public/game-console.html',
-      filename: 'game-console.html',
-    }),
-    new HtmlWebpackPlugin({
-      template: './public/game-editor.html',
-      filename: 'game-editor.html',
+      template: './public/index.html',
+      filename: 'index.html',
     }),
     new MonacoWebpackPlugin({
       languages: ['sql']
-    })
+    }),
+    // Needed for now to inlcude wasm file
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm'),
+          to: 'sql-wasm.wasm',
+        },
+      ],
+    }),
   ],
   resolve: {
-    extensions: ['.tsx', '.ts', '.js', '.jsx'],
-  },
-  externals: {
-    'sql.js': {
-      commonjs: 'sql.js',
-      commonjs2: 'sql.js',
-      amd: 'sql.js',
-      root: 'initSqlJs',
-    },
+    extensions: ['.tsx', '.ts', '.js', '.jsx', '.wasm'],
+    fallback: { "crypto": false, "fs": false, "path": false }
   },
   optimization: {
     splitChunks: {
@@ -84,6 +79,7 @@ module.exports = {
     port: 3000,
     open: true,
     hot: true,
+    historyApiFallback: true,
   },
   devtool: 'source-map',
   // cache: false
