@@ -1,50 +1,27 @@
-// React
-import { ReactComponentElement, ReactElement, ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-
-// React-Bootstrap
-import { Alert, Badge, Button, Card, CloseButton, Form, InputGroup, ListGroup, Modal, OverlayTrigger, Table, Tooltip, TooltipProps} from 'react-bootstrap';
-
-// classnames
+import React, { ReactElement, ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { Badge, Button, Form, InputGroup, ListGroup, Modal } from 'react-bootstrap';
 import classNames from 'classnames';
-
-// react-grid-layout
-import GridLayout from "react-grid-layout";
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
-
-// react-beaturiful-dnd
 import { DragDropContext, Draggable, DraggableProvidedDraggableProps, DropResult } from "react-beautiful-dnd";
 import { StrictModeDroppable } from "./hacks";
-
-// react-tabs
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
-import 'react-tabs/style/react-tabs.css';
-
-// react-syntax-highlighter
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism as prismStyle } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { DbData, DbSource, FetchDbFail, InitDbFail, ParseSchemaFail } from "./sql-js-api";
+import { Schema } from './schema';
+import { ImageSource, Named, UserImageFail, assert, encodeToBase64, materializeBinarySource, reorder } from "./util";
+import { Game, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, ImageScene, GameSource, createBlankGame, GameInitStatus, gameInitStatusToLoadingStatus as gameInitStatusToLoadingStatus } from './game-pure';
+import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbSourceModal, OpenGameSourceModal, OpenImageSourceModal, QueryEditor, SchemaView, UserImage, LoadingBarWithOpenButton, LoadingStatus, LoadingBar, LoadingBarWithOpenSaveButton } from './react';
+import { EditorInstance } from './game-editor-instance';
+
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import 'react-tabs/style/react-tabs.css';
+import './screen.css';
 const customStyle = {
     // Add other styles if needed
     overflow: 'auto', // This makes the content scrollable
     maxWidth: '100%'
 };
-
-
-// Custom CSS
-import './screen.css';
-
-
-import { DbData, DbSource, FetchDbFail, InitDbFail, ParseSchemaFail, ReadSqliteDbFail, RunInitScriptFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
-import { Schema } from './schema';
-import { Fail, FetchFail, ImageSource, Named, Source, Success, UserImageFail, assert, encodeToBase64, materializeBinarySource, reorder } from "./util";
-import { GameInstance } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, TextScene, SelectScene, ManipulateScene, gameToXML, ImageScene, GameSource, createBlankGame, GameInitStatus, gameInitStatusToLoadingStatus as gameInitStatusToLoadingStatus } from './game-pure';
-import { ClickableIcon, EskuelModal, IconActionButton, IconLinkButton, MultiWidget, NewGameFileModal, OpenDbSourceModal, OpenSourceModal, OpenGameSourceModal, OpenImageSourceModal, QueryEditor, ResultTableView, SchemaView, UserImage, Widget, LoadingBarWithOpenButton, LoadingStatus, LoadingBar, LoadingBarWithOpenSaveButton } from './react';
-import { EditorInstance } from './game-editor-instance';
-import { BrowserInstance } from './browser-instance';
-import { initial } from 'lodash';
-import React from 'react';
 
 export { Game } from './game-pure';
 

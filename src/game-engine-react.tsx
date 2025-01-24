@@ -1,41 +1,18 @@
-// React
-import React, { ReactComponentElement, ReactElement, ReactNode, createContext, useContext, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-
-// React-Bootstrap
-import { Accordion, Alert, Button, Card, CloseButton, Form, InputGroup, ListGroup, OverlayTrigger, Table, Tooltip, TooltipProps} from 'react-bootstrap';
-
-// classnames
+import React, { ReactElement, ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { Alert, Button, Card, ListGroup, OverlayTrigger, Tooltip, TooltipProps } from 'react-bootstrap';
 import classNames from 'classnames';
-
-// monaco
-// import * as monaco from 'monaco-editor';
-// import { loader } from '@monaco-editor/react';
-// import Editor from '@monaco-editor/react';
-// loader.config({ monaco });
-
-// react-grid-layout
 import GridLayout from "react-grid-layout";
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
-
-// react-tabs
-import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
-import 'react-tabs/style/react-tabs.css';
-
-// react-syntax-highlighter
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-
-// Custom CSS
-import './screen.css';
-
-
-import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
-import { Schema } from './schema';
+import { SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
 import { assert } from "./util";
 import { GameInstance } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, SchemaStatus, GameInitStatus, gameInitStatusToLoadingStatus, schemaStatusToLoadingStatus } from './game-pure';
+import { Game, GameState, GameResult, gameSqlResultHash, Scene, SchemaStatus, GameInitStatus, gameInitStatusToLoadingStatus, schemaStatusToLoadingStatus } from './game-pure';
 import { ClickableIcon, LoadingBar, QueryEditor, ResultTableView, SchemaView, UserImage, Widget } from './react';
+
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import 'react-tabs/style/react-tabs.css';
+import './screen.css';
 
 export { Game } from './game-pure';
 

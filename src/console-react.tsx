@@ -1,39 +1,14 @@
-// React
-import React, { ReactComponentElement, ReactElement, ReactNode, createContext, useContext, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useEffect, useState } from 'react';
+import { Named } from "./util";
+import { GameInstance } from './game-engine-instance';
+import { GameSource } from './game-pure';
+import { Icon, IconActionButton, IconLinkButton, OpenGameSourceModal } from './react';
+import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
-// React-Bootstrap
-import { Accordion, Alert, Button, Card, CloseButton, Form, InputGroup, ListGroup, Modal, OverlayTrigger, Table, Tooltip, TooltipProps} from 'react-bootstrap';
-
-// classnames
-import classNames from 'classnames';
-
-// monaco
-// import * as monaco from 'monaco-editor';
-// import { loader } from '@monaco-editor/react';
-// import Editor from '@monaco-editor/react';
-// loader.config({ monaco });
-
-// react-grid-layout
-import GridLayout from "react-grid-layout";
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-
-// react-tabs
-import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
-
-// Custom CSS
 import './screen.css';
-
-
-import { ParseSchemaFail, SqlResult, SqlResultError, SqlResultSucc } from "./sql-js-api";
-import { Schema } from './schema';
-import { Named, Source, assert } from "./util";
-import { GameInstance } from './game-engine-instance';
-import { Game, GameState, GameResult, gameSqlResultHash, GameResultCorrect, GameResultMiss, Scene, GameSource } from './game-pure';
-import { ClickableIcon, Icon, IconActionButton, IconLinkButton, OpenSourceModal, OpenGameSourceModal, ResultTableView, Widget } from './react';
-import { GameInstanceProvider, GameInstanceView } from './game-engine-react';
 
 export { Game } from './game-pure';
 
@@ -99,5 +74,3 @@ function GameConsoleHeaderView({fileSources, onSelectGame}: {fileSources: Named<
         </>
     );
 }
-
-

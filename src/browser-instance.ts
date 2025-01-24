@@ -1,8 +1,7 @@
-import { StaticDb, RunInitScriptFail, FetchDbFail, ReadSqliteDbFail, DbData, DbSource, InitDbFail } from "./sql-js-api";
-import { Schema, TableInfo, extractTableInfo } from "./schema";
-import { ParseSchemaFail, SqlResult, SqlResultError } from "./sql-js-api";
-
-import { Fail, Source, Success, assert, generateId, materializeBinarySource, materializeTextSource } from "./util";
+import { StaticDb, FetchDbFail, ReadSqliteDbFail, DbSource, InitDbFail } from "./sql-js-api";
+import { Schema } from "./schema";
+import { ParseSchemaFail, SqlResult } from "./sql-js-api";
+import { Fail, Success, assert, generateId, materializeBinarySource, materializeTextSource } from "./util";
 import { LoadingStatus } from "./react";
 
 // Terminology:
