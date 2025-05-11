@@ -11,12 +11,43 @@ An online demo can be found [here](https://eskuel.de).
 - **SQL Game Editor**: A tool to create new games for the SQL Game Console.
 
 
+# Setup
+Download the following external libraries:
+- sql.js library as described [here](./public/ext/sql-js/README.md)
+- bootstrap framework as described [here](./public/ext/bootstrap/README.md)
+
 # Usage
-For a quick start, follow these steps:
-1. Download the following external libraries:
-    - sql.js library as described [here](./public/ext/sql-js/README.md)
-    - bootstrap framework as described [here](./public/ext/bootstrap/README.md)
-2. Run `npm run dev-serve` to build and serve the library on [http://localhost:3000](http://localhost:3000).
+There are two ways to use this library.
+
+## Usage 1: Standalone
+Run `npm run dev-serve` to build and serve the library on [http://localhost:3000](http://localhost:3000).
+
+## Usage 2: Embedded
+The library offers you to plug in widgets at arbitrary places of your own HTML. Follow these steps.
+1. Run `npm run prod-build` to build the library. The library will land in the `dist` folder.
+2. Include the `dist/eskuel-suite.js` file in your HTML.
+```html
+<script defer="defer" src="/res/504.js"></script>
+<script defer="defer" src="/res/eskuel-suite.js"></script>
+```
+TODO: How can I make sure the file is not called 504.js?
+3. Embed widgets in one of the following ways:
+```html
+<div id="eskuel-root"></div>
+```
+The library will automatically find the `eskuel-root` div and replace it with the whole suite.
+```html
+<script>
+    document.addEventListener('DOMContentLoaded', function () {       
+        const b = new eskuelSuite.MultiBrowserComponent('browser');
+        b.addAndOpenUrl('/res/database.sql');
+        b.init();
+    });
+</script>
+<div id="browser"></div>
+```
+The library will place a browser component in the `browser` div.
+
 
 The library can be used in any web-based project. Simply compile the library using `npm run prod-build` and include the resulting `dist/eskuel-suite.js` file in your project.
 

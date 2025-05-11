@@ -77,36 +77,45 @@ export class GameEditorComponent {
 
 export class MultiEditorComponent {
 
-    private fileSources: Named<GameSource>[] = [];
+    private fileSources: Map<string, Named<GameSource>> = new Map();
     private instances: EditorInstance[] = [];
 
     constructor(readonly divId: string) { }
 
     addUrl(url: string) {
+        assert(this.fileSources.get(url) === undefined, `File source for url ${url} already exists`);
+
         const name = getFilenameWithoutExtension(url);
 
-        this.fileSources.push({ type: 'xml', source: { type: 'fetch', url }, name });
+        this.fileSources.set(url, { type: 'xml', source: { type: 'fetch', url }, name });
+    }
+
+    openUrl(url: string) {
+        const namedGame = this.fileSources.get(url);
+
+        assert(namedGame !== undefined, `File source for url ${url} not found`);
+
+        const newInstance = new EditorInstance(namedGame.name, namedGame);
+        this.instances.push(newInstance);
     }
 
     addAndOpenUrl(url: string) {
-        const name = getFilenameWithoutExtension(url);
-        const namedGame: Named<GameSource> = { type: 'xml', source: { type: 'fetch', url }, name };
-        const newInstance = new EditorInstance(name, namedGame);
-
-        this.fileSources.push(namedGame);
-        this.instances.push(newInstance);
+        this.addUrl(url);
+        this.openUrl(url);
     }
 
     init() {
         const div = document.getElementById(this.divId);
         assert(div !== null, `Element with id ${this.divId} not found`);
 
+        const fileSourcesList = Array.from(this.fileSources.values());
+
         const root = createRoot(div);
         root.render(
             <React.StrictMode>
                 <div className='eskuel'>
                     <div className='app-game-editor'>
-                        <MultiEditorComponentView initialInstances={this.instances} fileSources={this.fileSources} />
+                        <MultiEditorComponentView initialInstances={this.instances} fileSources={fileSourcesList} />
                     </div>
                 </div>
             </React.StrictMode>
