@@ -198,7 +198,7 @@ export class GameInstance {
         await this.advanceScene();
     }
 
-    async onSubmitQuery(sql: string): Promise<GameResultCorrect | GameResultMiss> {
+    async onSubmitQuery(sql: string): Promise<GameResultCorrect | GameResultMiss> {       
         const gameRes  = await this.game;
         const internalState = await this.internalState;
         assert(gameRes.ok && internalState.ok, 'Illegal state');
@@ -212,6 +212,7 @@ export class GameInstance {
 
         // Query `userDb`
         const userResultsRes = await userDb.exec(sql);
+
         assert(userResultsRes.ok);
         const userResults = userResultsRes.data;
 
@@ -244,6 +245,7 @@ export class GameInstance {
 
                 // Check each table
                 let correct = true;
+
                 for (let i = 0; i < userTables.length; i++) {
                     correct = correct && areResultsEqual(userTables[i], refTables[i], curScene.isRowOrderRelevant, curScene.isColOrderRelevant, curScene.areColNamesRelevant);
                 }

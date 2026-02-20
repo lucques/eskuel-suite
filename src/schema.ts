@@ -71,7 +71,8 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
     // Do it //
     ///////////
 
-    const matches = createTableStatement.match(createTableStatementRegexp);
+    const cleanedSQL = createTableStatement.replace(/--[^\r\n]*/g, ''); // Remove SQL comments
+    const matches = cleanedSQL.match(createTableStatementRegexp);
 
     if (matches === null || matches.length !== 3) {
         return { ok: false, error: { kind: 'extraction', details: 'Could not parse SQL CREATE TABLE statement.' } };
@@ -84,7 +85,7 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
         return { ok: false, error: { kind: 'internal-table' } };
     }
 
-    const colsData = matches[2].replace(/--.*\n/g, ''); // Remove SQL comments
+    const colsData = matches[2];
 
     const tableChunkMatches = colsData.match(/([^\(,]+(?:\([^\)]+\))?)+/g);
 

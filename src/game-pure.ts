@@ -5,10 +5,14 @@ import { Schema } from './schema';
 
 import * as he from 'he';
 import { LoadingStatus } from './react';
+import { SqlValue } from 'sql.js';
 const heOptions = {
     // useNamedReferences: true,
     // allowUnsafeSymbols: false
 };
+
+import stringHash from "string-hash";
+
 
 
 /////////////////////////////////
@@ -383,7 +387,14 @@ ${scenes}
 // Equality-checking //
 ///////////////////////
 
-export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.QueryExecResult, isRowOrderRelevant: boolean, isColOrderRelevant: boolean, areColNamesRelevant: boolean): boolean {
+export function areResultsEqual(
+    a: initSqlJs.QueryExecResult,
+    b: initSqlJs.QueryExecResult,
+    isRowOrderRelevant: boolean,
+    isColOrderRelevant: boolean,
+    areColNamesRelevant: boolean
+): boolean {
+
     // Number of rows must match; number of columns too.
     if (a.values.length != b.values.length || a.columns.length != b.columns.length) {
         return false;
@@ -393,17 +404,17 @@ export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.Query
     if (areColNamesRelevant && !_.isEqual(_.sortBy(a.columns), _.sortBy(b.columns))) {
         return false;
     }
-    
+
     // If col order is relevant, take identity permutation
-    // Else,
-    //   − if col names relevant,   compute permutations only on the col names 
-    //   − if col names irrelevant, wipe out col names and compute *all* permutations
-    const permutations =
+    // Else: Columns still have an identity
+    //   − if col names relevant,   column names define identity. Compute permutations on those 
+    //   − if col names irrelevant, column signatures define idenity. Compute permutations on those
+    const permutations: number[][] =
         isColOrderRelevant
         ? [Array.from({length: a.columns.length}, (_, i) => i)] // Identity permutation
         : areColNamesRelevant
           ? computePermutations(a.columns, b.columns)
-          : computePermutations(a.columns.map(() => ''), b.columns.map(() => ''));
+          : computePermutations(computeColumnSignatures(a.values), computeColumnSignatures(b.values));
 
     // It is only relevant whether *some* of the permutations yields row-wise equality. 
     let existsCorrectPermutation = false;
@@ -454,12 +465,29 @@ export function areResultsEqual(a: initSqlJs.QueryExecResult, b: initSqlJs.Query
 }
 
 /**
+ * Example:
+ * 
+ * source = ["a", "b", "b"]
+ * target = ["b", "a", "b"]
+ * 
+ * ->
+ * 
+ * [
+ *   [1, 0, 2],
+ *   [2, 0, 1]
+ * ]
+ * 
  * `source` and `target` contain the same elements, but in potentially different
  * order. There may be duplicates! That's when there are multiple permutations.
+ * 
+ * If some elements are unreachable (e.g., source = ["a", "b"], target = ["a", "c"]),
+ * return empty array.
  */
 function computePermutations(source: string[], target: string[]): number[][] {
-    assert(_.isEqual(_.sortBy(source), _.sortBy(target)), 'Columns must match');
-
+    if (!_.isEqual(_.sortBy(source), _.sortBy(target))) {
+        return [];
+    }
+    
     function computePermutationsRec(source: [number, string][], target: [number, string][]): number[][] {
         // No need to clone here since TypeScript ensures immutability in this context
         if (target.length === 0) {
@@ -497,6 +525,29 @@ function permute(source: any[], permutation: number[]): any[] {
         target.push(source[permutation[i]]);
     }
     return target;
+}
+
+function computeColumnSignatures(table: SqlValue[][]): string[] {
+    const columnSignatures: string[] = [];
+    const numColumns = table.length > 0 ? table[0].length : 0;
+
+    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+        const column: string[] = [];
+        for (let rowIndex = 0; rowIndex < table.length; rowIndex++) {
+            column.push(String(table[rowIndex][colIndex]));
+        }
+        const signature = computeColumnSignature(column);
+        columnSignatures.push(signature);
+    }
+
+    return columnSignatures;
+}
+
+// Column signature means: Some kind of hash that identifies a column irrespective of its row order
+// Achieved by first sorting accoridng to some arbitrary order.
+function computeColumnSignature(column: string[]): string {
+    const sortedColumn = _.sortBy(column)
+    return stringHash(JSON.stringify(sortedColumn)).toString();
 }
 
 

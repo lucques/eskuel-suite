@@ -573,7 +573,7 @@ function EditableScenesWidget({ scenes, onEditSceneStart, onAddSceneStart, onDel
                                                 {...provided.draggableProps}
                                                 {...provided.dragHandleProps}
                                             >
-                                                <EditableSceneView scene={scene} deletable={scenes.length > 1} onEditSceneStart={onEditSceneStart} onDeleteScene={onDeleteScene} />
+                                                <EditableSceneView index={index} scene={scene} deletable={scenes.length > 1} onEditSceneStart={onEditSceneStart} onDeleteScene={onDeleteScene} />
                                             </div>
                                         )}
                                     </Draggable>
@@ -589,25 +589,25 @@ function EditableScenesWidget({ scenes, onEditSceneStart, onAddSceneStart, onDel
     );
 }
 
-function EditableSceneView({scene, deletable, onEditSceneStart, onDeleteScene}: {scene: EditableScene, deletable: boolean, onEditSceneStart: (scene: EditableScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
+function EditableSceneView({index, scene, deletable, onEditSceneStart, onDeleteScene}: {index: number, scene: EditableScene, deletable: boolean, onEditSceneStart: (scene: EditableScene) => void, onDeleteScene: (scene: EditableScene) => void}) {
     if (scene.type === 'text') {
-        return <EditableTextSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
+        return <EditableTextSceneView index={index} scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
     }
     else if (scene.type === 'image') {
-        return <EditableImageSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
+        return <EditableImageSceneView index={index} scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene)} onDelete={() => onDeleteScene(scene)} />;
     }
     else if (scene.type === 'select') {
-        return <EditableSelectSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableSelectSceneView index={index} scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
     else {
-        return <EditableManipulateSceneView scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
+        return <EditableManipulateSceneView index={index} scene={scene} deletable={deletable} onEdit={() => onEditSceneStart(scene) } onDelete={() => onDeleteScene(scene)} />;
     }
 }
 
-function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<TextScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableTextSceneView({index, scene, deletable, onEdit, onDelete}: {index: number, scene: Editable<TextScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-text-scene-view">
-            <EditableSceneViewHeader bsVariant="secondary" deletable={deletable} title={<strong><em>Text</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="secondary" deletable={deletable} title={<>{index + 1}. <strong><em>Text</em></strong></>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-secondary bg-opacity-25 border-secondary">
                 {scene.text}
             </ListGroup.Item>
@@ -615,10 +615,10 @@ function EditableTextSceneView({scene, deletable, onEdit, onDelete}: {scene: Edi
     );
 }
 
-function EditableImageSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<ImageScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableImageSceneView({index, scene, deletable, onEdit, onDelete}: {index: number, scene: Editable<ImageScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-image-scene-view">
-            <EditableSceneViewHeader bsVariant="warning" deletable={deletable} title={<strong><em>Image</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="warning" deletable={deletable} title={<>{index + 1}. <strong><em>Bild</em></strong></>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-warning bg-opacity-25 border-warning">
                 <UserImage base64string={scene.base64string} /> 
             </ListGroup.Item>
@@ -626,10 +626,10 @@ function EditableImageSceneView({scene, deletable, onEdit, onDelete}: {scene: Ed
     );
 }
 
-function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<SelectScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableSelectSceneView({index, scene, deletable, onEdit, onDelete}: {index: number, scene: Editable<SelectScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-select-scene-view">
-            <EditableSceneViewHeader bsVariant="primary" deletable={deletable} title={<strong><em>Select</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="primary" deletable={deletable} title={<>{index + 1}. <strong><em>Select-Abfrage</em></strong></>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-primary bg-opacity-25 border-primary">
                 {scene.text}
             </ListGroup.Item>
@@ -680,10 +680,10 @@ function EditableSelectSceneView({scene, deletable, onEdit, onDelete}: {scene: E
     );
 }
 
-function EditableManipulateSceneView({scene, deletable, onEdit, onDelete}: {scene: Editable<ManipulateScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
+function EditableManipulateSceneView({index, scene, deletable, onEdit, onDelete}: {index: number, scene: Editable<ManipulateScene>, deletable: boolean, onEdit: () => void, onDelete: () => void}) {
     return (
         <ListGroup className="editable-manipulte-scene-view">
-            <EditableSceneViewHeader bsVariant="success" deletable={deletable} title={<strong><em>Manipulate</em></strong>} onEdit={onEdit} onDelete={onDelete} />
+            <EditableSceneViewHeader bsVariant="success" deletable={deletable} title={<>{index + 1}. <strong><em>Manipulation</em></strong></>} onEdit={onEdit} onDelete={onDelete} />
             <ListGroup.Item className="bg-success bg-opacity-25 border-success">
                 {scene.text}
             </ListGroup.Item>
@@ -955,7 +955,7 @@ function ChooseSceneType({ sceneType, setSceneType }: { sceneType: SceneType | n
             <Form.Check
                 inline
                 type="radio"
-                label="Image"
+                label="Bild"
                 name="sceneType"
                 id="image"
                 value="image"
@@ -965,7 +965,7 @@ function ChooseSceneType({ sceneType, setSceneType }: { sceneType: SceneType | n
             <Form.Check
                 inline
                 type="radio"
-                label="Select"
+                label="Select-Abfrage"
                 name="sceneType"
                 id="select"
                 value="select"
@@ -975,7 +975,7 @@ function ChooseSceneType({ sceneType, setSceneType }: { sceneType: SceneType | n
             <Form.Check
                 inline
                 type="radio"
-                label="Manipulate"
+                label="Manipulation"
                 name="sceneType"
                 id="manipulate"
                 value="manipulate"

@@ -175,6 +175,7 @@ export function GameInstanceView({instance}: {instance: GameInstance}) {
 
     // SQL query `sqlValue` is taken from global context
     const onSubmitQuery = () => {
+
         assert(gameState !== null)
 
         instance.onSubmitQuery(sqlValue).then(r => {
