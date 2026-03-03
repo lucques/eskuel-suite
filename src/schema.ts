@@ -40,14 +40,14 @@ export function extractTableInfo(createTableStatement: string): Success<TableInf
     // Tag function for template literals that is used to produce regexes
     let r = String.raw;
 
-    // Use `idRegex` to capture an identifier (e.g. table name, col name, etc.)
     const idRegexp = r`(` +
-                       r`[\p{L}_]+` + r`|` + // single word
-                       r`"[^"]+"`   + r`|` + // any word sequence enclosed by "
-                       r`'[^']+'`   + r`|` + // any word sequence enclosed by '
-                        '`[^`]+`'          + // any word sequence enclosed by `
-                     r`)`;
-    
+        r`[\p{L}_][\p{L}\p{N}_]*` + r`|` +  // single word
+        r`"[^"]+"`   + r`|` +               // any word sequence enclosed by "
+        r`'[^']+'`   + r`|` +               // any word sequence enclosed by '
+            '`[^`]+`' +                     // any word sequence enclosed by `
+    r`)`;
+
+    // Use `idRegex` to capture an identifier (e.g. table name, col name, etc.)   
     function parseId(match: string): string {
         if (match.startsWith('"') || match.startsWith('\'') || match.startsWith('`')) {
             return match.slice(1, -1);
