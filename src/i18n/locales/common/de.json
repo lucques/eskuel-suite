@@ -1,0 +1,153 @@
+{
+    "about": {
+        "copyright": "Copyright © 2026 Lukas Convent",
+        "description": "Die Eskuel Suite ist eine Sammlung von Apps zum Erstellen und Bearbeiten SQL-basierter Lehr- und Lernmaterialien.",
+        "full_license": "Vollständiger Lizenztext (GNU GPL v3)",
+        "license_notice": "Dieses Programm ist freie Software: Sie dürfen es unter den Bedingungen der GNU General Public License, wie von der Free Software Foundation veröffentlicht, ausschließlich gemäß Version 3 weiterverbreiten und/oder verändern.",
+        "source_code": "Quellcode",
+        "third_party_licenses": "Lizenzen verwendeter Software",
+        "title": "Über die Eskuel Suite",
+        "version": "Version {{version}}",
+        "warranty_notice": "Dieses Programm wird ohne jegliche Gewährleistung bereitgestellt. Einzelheiten finden Sie in der GNU GPL v3."
+    },
+    "button": {
+        "open_database": "Datenbank öffnen",
+        "open_game": "Spiel öffnen"
+    },
+    "confirm_leave": {
+        "body": "Möchtest du die App wirklich verlassen? Alle SQL-Anweisungen und Ergebnisse werden verworfen.",
+        "leave": "App verlassen",
+        "stay": "Bleiben",
+        "title": "App verlassen?"
+    },
+    "confirm_save_changes": {
+        "dont_save": "Nicht speichern"
+    },
+    "catalog_source": {
+        "load_database": "Datenbank aus Katalog laden",
+        "load_game": "Spiel aus Katalog laden",
+        "no_database_for_language": "Für {{language}} ist derzeit keine Datenbank verfügbar. Vielleicht möchtest du es mit einer anderen Sprache versuchen.",
+        "no_game_for_language": "Für {{language}} ist derzeit kein Spiel verfügbar. Vielleicht möchtest du es mit einer anderen Sprache versuchen.",
+        "select_file": "Datei für {{title}} auswählen"
+    },
+    "common": {
+        "add": "Hinzufügen",
+        "cancel": "Abbrechen",
+        "cancelling": "Wird abgebrochen...",
+        "close": "Schließen",
+        "create": "Erstellen",
+        "error": "Fehler",
+        "file_read_error": "Die Datei konnte nicht gelesen werden. Bitte wähle sie erneut aus.",
+        "file_too_large": "Die Datei überschreitet das Limit von {{limit}} MB.",
+        "licenses": "Lizenzen",
+        "loaded": "Geladen",
+        "loading": "Lädt...",
+        "menu": "Menü",
+        "more_information": "Mehr Informationen",
+        "nothing_loaded": "Nichts geladen",
+        "open": "Öffnen",
+        "open_file": "Datei öffnen",
+        "save": "Speichern",
+        "switch_to_dark_mode": "Zum dunklen Farbschema wechseln",
+        "switch_to_light_mode": "Zum hellen Farbschema wechseln"
+    },
+    "package_about": {
+        "contributor_roles": {
+            "package_maintainer_only": "pflegt nur das Paket"
+        },
+        "source_version": "Version: {{version}}"
+    },
+    "game_package_about": {
+        "contributors": "Mitwirkende",
+        "database_artifact": "Datenbankartefakt",
+        "database_package": "Datenbankpaket",
+        "database_rights": "Lizenzierung und Herkunft der Datenbank",
+        "database_system": "Datenbanksystem",
+        "database_title": "Datenbanktitel",
+        "description": "Diese Informationen und die enthaltenen Texte werden mit dem Spielpaket weitergegeben. Die Lizenzierung von Spiel und Datenbank wird getrennt dargestellt, da das Spielpaket seine Datenbankabhängigkeit nicht neu lizenziert.",
+        "game_rights": "Lizenzierung und Herkunft des Spiels",
+        "game_title": "Spieltitel",
+        "import_notice": "Dieses .eskuelgame-Paket wurde als bearbeitbare XML-Datei importiert. Beim Speichern oder Exportieren der XML-Datei bleiben die Paketmetadaten und enthaltenen Lizenzdateien nicht erhalten.",
+        "licenses": "Lizenzen",
+        "notices": "Hinweise",
+        "package_name_and_version": "Paketname und Version",
+        "provenance": "Herkunft",
+        "show": "Paketinformationen und Lizenzen",
+        "sources": "Quellen",
+        "title": "Über {{title}}"
+    },
+    "game_source": {
+        "open_file_title": "Spieldatei öffnen",
+        "open_title": "Spiel öffnen",
+        "unsupported_file_type": "Nicht unterstützter Dateityp. Wähle eine .xml- oder .eskuelgame-Datei."
+    },
+    "database_source": {
+        "unsupported_file_type": "Nicht unterstützter Dateityp. Wähle eine .eskueldb-, .sql- oder SQLite-Datenbankdatei (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3)."
+    },
+    "initialization": {
+        "database_engine_message": "In der Datenbank-Engine ist ein interner Fehler aufgetreten.",
+        "database_engine_title": "Datenbank-Engine fehlgeschlagen",
+        "database_fetch_message": "Die Datenbank konnte nicht von {{url}} geöffnet werden.",
+        "database_fetch_title": "Datenbank konnte nicht geöffnet werden",
+        "database_initialize_message": "Das SQL-Initialisierungsskript konnte nicht ausgeführt werden.",
+        "database_initialize_title": "Initialisierung der Datenbank fehlgeschlagen",
+        "database_metadata_message": "Der Eskuel-Metadaten-Header in der SQL-Datei ist ungültig.",
+        "database_metadata_title": "SQL-Metadaten sind ungültig",
+        "database_package_message": "Die ausgewählte Datei ist kein gültiges oder unterstütztes Eskuel-Datenbankpaket.",
+        "database_package_title": "Datenbankpaket ist ungültig",
+        "database_system_message": "Das Datenbanksystem {{system}} wird von der verfügbaren Datenbank-Engine nicht unterstützt.",
+        "database_system_title": "Datenbanksystem wird nicht unterstützt",
+        "database_read_message": "Die ausgewählte Datei ist keine gültige oder unterstützte SQLite-Datenbank.",
+        "database_read_title": "Datenbank konnte nicht geöffnet werden",
+        "database_system_version_message": "Die Quelle benötigt {{system}} {{requiredMinVersion}} oder neuer, aber die verfügbare Engine stellt Version {{actualVersion}} bereit.",
+        "database_system_version_title": "Datenbanksystemversion wird nicht unterstützt",
+        "database_too_large_message": "Die Datenbank überschreitet die eingestellte maximale Dateigröße.",
+        "database_too_large_title": "Datenbank ist zu groß",
+        "game_fetch_message": "Das Spiel konnte nicht von {{url}} geöffnet werden.",
+        "game_fetch_title": "Spiel konnte nicht geöffnet werden",
+        "game_image_too_large_message": "Das eingebettete Bild in Szene {{sceneNumber}} überschreitet die eingestellte maximale Dateigröße.",
+        "game_image_too_large_title": "Spielbild ist zu groß",
+        "game_image_dimensions_too_large_message": "Das eingebettete Bild in Szene {{sceneNumber}} überschreitet die eingestellte maximale Breite oder Höhe.",
+        "game_image_dimensions_too_large_title": "Abmessungen eines Spielbildes sind zu groß",
+        "game_parse_message": "Die ausgewählte Datei enthält kein gültiges Spiel.",
+        "game_parse_title": "Spieldatei ist ungültig",
+        "game_package_message": "Die ausgewählte Datei ist kein gültiges oder unterstütztes Eskuel-Spielpaket.",
+        "game_package_title": "Spielpaket ist ungültig",
+        "game_too_large_message": "Das Spiel überschreitet die eingestellte maximale Dateigröße.",
+        "game_too_large_title": "Spiel ist zu groß",
+        "session_error_message": "Die aktuelle Sitzung kann nicht sicher fortgesetzt werden.",
+        "session_error_title": "Sitzung fehlgeschlagen",
+        "technical_details": "Technische Details",
+        "unexpected_message": "Beim Initialisieren der Anwendung ist ein unerwarteter Fehler aufgetreten.",
+        "unexpected_title": "Initialisierung fehlgeschlagen"
+    },
+    "layout": {
+        "desktop": "Desktop",
+        "mobile": "Mobilansicht",
+        "switch": "Layout wechseln"
+    },
+    "result": {
+        "error_message": "Fehlermeldung",
+        "no_rows": "(Ergebnis enthält keine Zeilen)",
+        "truncated_rows": "(Ergebnis wurde nach {{count}} Zeilen abgeschnitten)"
+    },
+    "session_notice": {
+        "browser_database_reset": "Abfrage abgebrochen. Die Datenbank wurde auf ihren Anfangszustand zurückgesetzt.",
+        "game_console_database_reset": "Die Datenbank wurde auf den Anfang von Szene {{sceneNumber}} zurückgesetzt.",
+        "game_console_database_reset_after_cancellation": "Aktion abgebrochen. Die Datenbank wurde auf den Anfang von Szene {{sceneNumber}} zurückgesetzt.",
+        "game_editor_database_reset": "Aktion abgebrochen. Die Datenbank wurde auf ihren Anfangszustand zurückgesetzt.",
+        "game_editor_source_load_cancelled": "Das Öffnen der Datenbank wurde abgebrochen. Die vorhandene Datenbank blieb unverändert."
+    },
+    "schema": {
+        "foreign_key": "Fremdschlüssel",
+        "foreign_key_primary_key_reference": "Verweist auf den Primärschlüssel in {{table}}",
+        "foreign_key_reference": "Verweist auf {{column}} in {{table}}",
+        "no_tables": "Keine Tabellen vorhanden",
+        "primary_key": "Primärschlüssel",
+        "underlined": "unterstrichen"
+    },
+    "sql": {
+        "execute": "Ausführen",
+        "executing": "SQL wird ausgeführt..."
+    }
+}

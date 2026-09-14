@@ -1,0 +1,28 @@
+.itemList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 0;
+}
+
+.disclosureList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.disclosure summary {
+    cursor: pointer;
+}
+
+.textContent {
+    background: var(--bs-tertiary-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: 0.8rem;
+    margin: 0.75rem 0 0;
+    max-height: 20rem;
+    overflow: auto;
+    padding: 0.75rem;
+    white-space: pre-wrap;
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game>
+    <head>
+        <title>Minimal Select</title>
+        <teaser>A small integration fixture</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Introduction</text>
+        </text-scene>
+        <select-scene is-row-order-relevant="true" is-col-order-relevant="true" are-col-names-relevant="true">
+            <text>Select the names</text>
+            <sql-solution>SELECT name FROM items ORDER BY id</sql-solution>
+            <sql-placeholder>SELECT</sql-placeholder>
+        </select-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+        INSERT INTO items VALUES (1, 'hammer'), (2, 'key');
+    </initial-sql-script>
+</game>

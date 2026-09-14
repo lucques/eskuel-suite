@@ -1,0 +1,354 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package/v1/datapackage.schema.json",
+    "title": "Eskuel database package format 1",
+    "description": "A strict Data Package 2.0 profile for one SQLite or PostgreSQL database artifact.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "$schema",
+        "name",
+        "title",
+        "version",
+        "contributors",
+        "licenses",
+        "resources"
+    ],
+    "properties": {
+        "$schema": {
+            "const": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package/v1/datapackage.schema.json"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9._-]+$"
+        },
+        "title": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+        },
+        "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+        },
+        "contributors": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "$ref": "#/definitions/contributor"
+            },
+            "contains": {
+                "type": "object",
+                "required": [
+                    "roles"
+                ],
+                "properties": {
+                    "roles": {
+                        "type": "array",
+                        "contains": {
+                            "const": "creator"
+                        }
+                    }
+                }
+            }
+        },
+        "licenses": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "$ref": "#/definitions/license"
+            }
+        },
+        "notices": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "$ref": "#/definitions/notice"
+            }
+        },
+        "provenance": {
+            "$ref": "#/definitions/provenance"
+        },
+        "sources": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/source"
+            }
+        },
+        "resources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+                "$ref": "#/definitions/databaseResource"
+            }
+        }
+    },
+    "definitions": {
+        "nonEmptyString": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+        },
+        "fullyQualifiedUrl": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^(?:https?|ftp|ftps)://"
+        },
+        "licensePath": {
+            "type": "string",
+            "pattern": "^LICENSES/[A-Za-z0-9][A-Za-z0-9._+-]*\\.txt$"
+        },
+        "noticePath": {
+            "type": "string",
+            "pattern": "^NOTICES/[A-Za-z0-9][A-Za-z0-9._+-]*\\.txt$"
+        },
+        "provenancePath": {
+            "type": "string",
+            "pattern": "^PROVENANCE(?:[._+-][A-Za-z0-9][A-Za-z0-9._+-]*)?$"
+        },
+        "provenanceMediatype": {
+            "type": "string",
+            "anyOf": [
+                {
+                    "pattern": "^text/[a-z0-9!#$&^_.+-]+$"
+                },
+                {
+                    "pattern": "^application/(?:[a-z0-9!#$&^_.+-]+\\+)?(?:json|xml|yaml)$"
+                }
+            ]
+        },
+        "contributor": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+                "title": {
+                    "$ref": "#/definitions/nonEmptyString"
+                },
+                "givenName": {
+                    "$ref": "#/definitions/nonEmptyString"
+                },
+                "familyName": {
+                    "$ref": "#/definitions/nonEmptyString"
+                },
+                "path": {
+                    "$ref": "#/definitions/fullyQualifiedUrl"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "roles": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Contributor roles. 'creator' identifies a creator or maintainer of the package; the profile-specific 'dataCreator' additionally identifies a creator of the database content.",
+                    "items": {
+                        "$ref": "#/definitions/nonEmptyString"
+                    }
+                },
+                "organization": {
+                    "$ref": "#/definitions/nonEmptyString"
+                }
+            }
+        },
+        "license": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/nonEmptyString"
+                },
+                "path": {
+                    "$ref": "#/definitions/licensePath"
+                },
+                "title": {
+                    "$ref": "#/definitions/nonEmptyString"
+                }
+            }
+        },
+        "notice": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "$ref": "#/definitions/noticePath"
+                },
+                "title": {
+                    "$ref": "#/definitions/nonEmptyString"
+                }
+            }
+        },
+        "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path",
+                "mediatype"
+            ],
+            "properties": {
+                "path": {
+                    "$ref": "#/definitions/provenancePath"
+                },
+                "mediatype": {
+                    "$ref": "#/definitions/provenanceMediatype"
+                }
+            }
+        },
+        "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+                "title": {
+                    "$ref": "#/definitions/nonEmptyString"
+                },
+                "path": {
+                    "$ref": "#/definitions/fullyQualifiedUrl"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "version": {
+                    "$ref": "#/definitions/nonEmptyString"
+                }
+            }
+        },
+        "databaseMetadata": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "artifactType",
+                "system",
+                "systemMinVersion"
+            ],
+            "properties": {
+                "artifactType": {
+                    "description": "The kind of database resource inside this package. This is distinct from an external catalog classifying the outer .eskueldb file as a package.",
+                    "enum": [
+                        "initial-sql-script",
+                        "database-file"
+                    ]
+                },
+                "system": {
+                    "description": "The database system required by the inner resource. An .eskueldb package does not imply SQLite: initialization scripts can target SQLite or PostgreSQL.",
+                    "enum": [
+                        "sqlite",
+                        "postgresql"
+                    ]
+                },
+                "systemMinVersion": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+                }
+            }
+        },
+        "databaseResource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "path",
+                "format",
+                "mediatype",
+                "bytes",
+                "hash",
+                "eskuel:database"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9._-]+$"
+                },
+                "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*//)(?!.*\\u0000)(?!\\.)(?!.*/\\.)[^/]+(?:/[^/]+)*$"
+                },
+                "format": {
+                    "enum": [
+                        "sql",
+                        "sqlite"
+                    ]
+                },
+                "mediatype": {
+                    "enum": [
+                        "application/sql",
+                        "application/vnd.sqlite3"
+                    ]
+                },
+                "bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                },
+                "hash": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "eskuel:database": {
+                    "$ref": "#/definitions/databaseMetadata"
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "eskuel:database": {
+                                "properties": {
+                                    "artifactType": {
+                                        "const": "initial-sql-script"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "path": {
+                                "pattern": "\\.sql$"
+                            },
+                            "format": {
+                                "const": "sql"
+                            },
+                            "mediatype": {
+                                "const": "application/sql"
+                            }
+                        }
+                    },
+                    "else": {
+                        "properties": {
+                            "path": {
+                                "pattern": "\\.sqlite$"
+                            },
+                            "format": {
+                                "const": "sqlite"
+                            },
+                            "mediatype": {
+                                "const": "application/vnd.sqlite3"
+                            },
+                            "eskuel:database": {
+                                "properties": {
+                                    "system": {
+                                        "const": "sqlite"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

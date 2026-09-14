@@ -1,0 +1,53 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package-recipe/v1/recipe.schema.json",
+    "name": "example",
+    "title": "Example database",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Example author",
+            "roles": [
+                "creator"
+            ]
+        },
+        {
+            "title": "Example author",
+            "roles": [
+                "dataCreator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "Example",
+            "title": "Example License",
+            "path": "LICENSES/Example.txt",
+            "inputPath": "Example-License.txt"
+        }
+    ],
+    "notices": [
+        {
+            "title": "Example rights notice",
+            "path": "NOTICES/Example.txt",
+            "inputPath": "Example-Notice.txt"
+        }
+    ],
+    "provenance": {
+        "path": "PROVENANCE.json",
+        "mediatype": "application/json",
+        "inputPath": "Example-Provenance.json"
+    },
+    "sources": [
+        {
+            "title": "Example source",
+            "path": "https://example.com/data"
+        }
+    ],
+    "resource": {
+        "name": "example",
+        "path": "data/example.sql",
+        "artifactType": "initial-sql-script",
+        "system": "sqlite",
+        "systemMinVersion": "3.37.0"
+    }
+}

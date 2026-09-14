@@ -1,3 +1,6 @@
+-- eskuel:system=sqlite
+-- eskuel:systemMinVersion=3.37.0
+
 BEGIN TRANSACTION;
 
 -- Tabelle "kunde" erstellen
@@ -31,7 +34,7 @@ CREATE TABLE warenkorb (
 INSERT INTO kunde (kundennr, vorname, nachname, gebdatum)
 VALUES
     (1, 'Max', 'Mustermann', '1990-01-15'),
-    (2, 'Anna', 'Schmidt', '1985-06-22'),
+    (2, 'Amira', 'Haddad', '1985-06-22'),
     (3, 'David', 'Maier', '1995-09-10'),
     (4, 'Sarah', 'Müller', '1988-03-18'),
     (5, 'Michael', 'Schulz', '1992-07-01'),
@@ -49,7 +52,12 @@ VALUES
     (17, 'Paul', 'Krüger', '1991-04-02'),
     (18, 'Melina', 'Wolf', '1992-11-19'),
     (19, 'Jonas', 'Schröder', '1988-08-05'),
-    (20, 'Emilia', 'Fuchs', '2002-01-24');
+    (20, 'Emilia', 'Fuchs', '2002-01-24'),
+    (21, 'Olena', 'Kovalenko', '1994-02-17'),
+    (22, 'Emre', 'Yılmaz', '1989-08-06'),
+    (23, 'Emily', 'Thompson', '1997-11-23'),
+    (24, 'Giulia', 'Romano', '1991-05-14'),
+    (25, 'Yuki', 'Tanaka', '1986-12-02');
 
 -- Beispieldaten einfügen: Bücher
 INSERT INTO buch (isbn, titel, autor, preis, genre)
@@ -73,7 +81,59 @@ VALUES
     ('978-3-453-43570-8', 'Eragon', 'Christopher Paolini', 11.75, 'Fantasy'),
     ('978-3-442-46630-0', 'Der Zauberer', 'Wolfgang Hohlbein', 14.25, 'Fantasy'),
     ('978-3-10-397083-5', 'Der Fänger im Roggen', 'J.D. Salinger', 9.95, 'Fiktion'),
-    ('978-3-596-52008-3', 'Die Säulen der Erde', 'Ken Follett', 17.00, 'Historische Fiktion');
+    ('978-3-596-52008-3', 'Die Säulen der Erde', 'Ken Follett', 17.00, 'Historische Fiktion'),
+    ('978-3-00000-001-0', 'Tintenherz', 'Cornelia Funke', 14.00, 'Fantasy'),
+    ('978-3-00000-002-7', 'Die unendliche Geschichte', 'Michael Ende', 16.00, 'Fantasy'),
+    ('978-3-00000-003-4', 'Krabat', 'Otfried Preußler', 9.00, 'Fantasy'),
+    ('978-3-00000-004-1', 'QualityLand', 'Marc-Uwe Kling', 12.00, 'Science Fiction'),
+    ('978-3-00000-005-8', 'Die drei Sonnen', 'Cixin Liu', 13.00, 'Science Fiction'),
+    ('978-3-00000-006-5', 'Dune', 'Frank Herbert', 18.00, 'Science Fiction'),
+    ('978-3-00000-007-2', 'Solaris', 'Stanisław Lem', 11.50, 'Science Fiction'),
+    ('978-3-00000-008-9', 'Der Marsianer', 'Andy Weir', 12.99, 'Science Fiction'),
+    ('978-3-00000-009-6', 'Der Report der Magd', 'Margaret Atwood', 14.00, 'Science Fiction'),
+    ('978-3-00000-010-2', 'Fahrenheit 451', 'Ray Bradbury', 10.00, 'Science Fiction'),
+    ('978-3-00000-011-9', 'Neuromancer', 'William Gibson', 13.50, 'Science Fiction'),
+    ('978-3-00000-012-6', 'Die linke Hand der Dunkelheit', 'Ursula K. Le Guin', 15.00, 'Science Fiction'),
+    ('978-3-00000-013-3', 'Mord im Orientexpress', 'Agatha Christie', 10.00, 'Krimi'),
+    ('978-3-00000-014-0', 'Der Hund der Baskervilles', 'Arthur Conan Doyle', 8.50, 'Krimi'),
+    ('978-3-00000-015-7', 'Der Richter und sein Henker', 'Friedrich Dürrenmatt', 9.00, 'Krimi'),
+    ('978-3-00000-016-4', 'Schneewittchen muss sterben', 'Nele Neuhaus', 12.00, 'Krimi'),
+    ('978-3-00000-017-1', 'Tannöd', 'Andrea Maria Schenkel', 10.00, 'Krimi'),
+    ('978-3-00000-018-8', 'Der talentierte Mr. Ripley', 'Patricia Highsmith', 11.00, 'Thriller'),
+    ('978-3-00000-019-5', 'Gone Girl', 'Gillian Flynn', 13.00, 'Thriller'),
+    ('978-3-00000-020-1', 'Das Parfum', 'Patrick Süskind', 12.00, 'Historische Fiktion'),
+    ('978-3-00000-021-8', 'Im Westen nichts Neues', 'Erich Maria Remarque', 11.00, 'Historische Fiktion'),
+    ('978-3-00000-022-5', 'Der Buchdieb', 'Markus Zusak', 14.00, 'Historische Fiktion'),
+    ('978-3-00000-023-2', 'Die Päpstin', 'Donna W. Cross', 13.00, 'Historische Fiktion'),
+    ('978-3-00000-024-9', 'Das Salz der Erde', 'Daniel Wolf', 16.00, 'Historische Fiktion'),
+    ('978-3-00000-025-6', 'Buddenbrooks', 'Thomas Mann', 12.00, 'Klassiker'),
+    ('978-3-00000-026-3', 'Effi Briest', 'Theodor Fontane', 7.00, 'Klassiker'),
+    ('978-3-00000-027-0', 'Der Prozess', 'Franz Kafka', 8.00, 'Klassiker'),
+    ('978-3-00000-028-7', 'Faust I', 'Johann Wolfgang von Goethe', 6.50, 'Klassiker'),
+    ('978-3-00000-029-4', 'Die Verwandlung', 'Franz Kafka', 6.00, 'Klassiker'),
+    ('978-3-00000-030-0', 'Der Steppenwolf', 'Hermann Hesse', 10.00, 'Klassiker'),
+    ('978-3-00000-031-7', 'Siddhartha', 'Hermann Hesse', 9.00, 'Klassiker'),
+    ('978-3-00000-032-4', 'Homo faber', 'Max Frisch', 9.50, 'Klassiker'),
+    ('978-3-00000-033-1', 'Das Tagebuch der Anne Frank', 'Anne Frank', 10.00, 'Biografie'),
+    ('978-3-00000-034-8', 'Steve Jobs', 'Walter Isaacson', 18.00, 'Biografie'),
+    ('978-3-00000-035-5', 'Eine kurze Geschichte der Zeit', 'Stephen Hawking', 12.00, 'Sachbuch'),
+    ('978-3-00000-036-2', 'Eine kurze Geschichte der Menschheit', 'Yuval Noah Harari', 16.00, 'Sachbuch'),
+    ('978-3-00000-037-9', 'Das geheime Leben der Bäume', 'Peter Wohlleben', 11.00, 'Sachbuch'),
+    ('978-3-00000-038-6', 'Darm mit Charme', 'Giulia Enders', 12.00, 'Sachbuch'),
+    ('978-3-00000-039-3', 'Die Kunst des klaren Denkens', 'Rolf Dobelli', 13.00, 'Sachbuch'),
+    ('978-3-00000-040-9', 'Factfulness', 'Hans Rosling', 14.00, 'Sachbuch'),
+    ('978-3-00000-041-6', 'Sofies Welt', 'Jostein Gaarder', 13.00, 'Philosophie'),
+    ('978-3-00000-042-3', 'Die philosophische Hintertreppe', 'Wilhelm Weischedel', 11.00, 'Philosophie'),
+    ('978-3-00000-043-0', 'Pippi Langstrumpf', 'Astrid Lindgren', 12.00, 'Kinderliteratur'),
+    ('978-3-00000-044-7', 'Emil und die Detektive', 'Erich Kästner', 10.00, 'Kinderliteratur'),
+    ('978-3-00000-045-4', 'Der Räuber Hotzenplotz', 'Otfried Preußler', 11.00, 'Kinderliteratur'),
+    ('978-3-00000-046-1', 'Eine Woche voller Samstage', 'Paul Maar', 10.00, 'Kinderliteratur'),
+    ('978-3-00000-047-8', 'Ronja Räubertochter', 'Astrid Lindgren', 12.50, 'Kinderliteratur'),
+    ('978-3-00000-048-5', 'Tschick', 'Wolfgang Herrndorf', 11.00, 'Jugendliteratur'),
+    ('978-3-00000-049-2', 'Die Welle', 'Morton Rhue', 9.00, 'Jugendliteratur'),
+    ('978-3-00000-050-8', 'Die Mitte der Welt', 'Andreas Steinhöfel', 10.00, 'Jugendliteratur'),
+    ('978-3-00000-051-5', 'The Fabric of Reality', 'David Deutsch', 16.00, 'Sachbuch'),
+    ('978-3-00000-052-2', 'Der Anfang der Unendlichkeit', 'David Deutsch', 18.00, 'Sachbuch');
 
 -- Beispieldaten einfügen: Warenkorb-Zuordnungen
 INSERT INTO warenkorb (kundennr, isbn, anzahl)
@@ -119,6 +179,26 @@ VALUES
     (9, '978-3-86541-859-0', 1),
     (12, '978-3-596-18048-7', 1),
     (15, '978-3-442-46630-0', 1),
-    (18, '978-3-423-23034-7', 1);
+    (18, '978-3-423-23034-7', 1),
+    (1, '978-3-00000-051-5', 1),
+    (3, '978-3-00000-005-8', 2),
+    (5, '978-3-00000-013-3', 1),
+    (8, '978-3-00000-043-0', 1),
+    (12, '978-3-00000-035-5', 1),
+    (21, '978-3-00000-009-6', 2),
+    (21, '978-3-00000-035-5', 1),
+    (21, '978-3-00000-051-5', 1),
+    (22, '978-3-00000-004-1', 1),
+    (22, '978-3-00000-013-3', 2),
+    (22, '978-3-00000-052-2', 1),
+    (23, '978-3-00000-007-2', 1),
+    (23, '978-3-00000-019-5', 1),
+    (23, '978-3-00000-047-8', 2),
+    (24, '978-3-00000-020-1', 1),
+    (24, '978-3-00000-038-6', 1),
+    (24, '978-3-00000-043-0', 1),
+    (25, '978-3-00000-005-8', 2),
+    (25, '978-3-00000-012-6', 1),
+    (25, '978-3-00000-031-7', 1);
 
 COMMIT;

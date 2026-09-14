@@ -1,0 +1,108 @@
+.providedSourcesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    gap: 1rem;
+}
+
+.providedSourceCard {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(2.5rem, auto) 1fr;
+    overflow: hidden;
+    border: var(--bs-border-width) solid var(--bs-primary-border-subtle);
+    border-radius: var(--bs-border-radius);
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+    padding-bottom: 0.75rem;
+    transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.sourceCardRadio {
+    position: absolute;
+    z-index: 1;
+    top: 1rem;
+    left: 1rem;
+    float: none;
+    margin: 0;
+    cursor: default;
+}
+
+.providedSourceCard:hover,
+.providedSourceCard:focus-within {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.18);
+}
+
+.providedSourceCardSelected {
+    border-color: var(--bs-primary);
+    background-color: var(--bs-primary);
+    color: var(--bs-white);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.3);
+}
+
+.sourceCardHeader {
+    grid-row: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.5rem;
+    color: inherit;
+    text-align: center;
+}
+
+.providedSourceTitle {
+    width: 100%;
+    overflow-wrap: anywhere;
+    font-weight: 700;
+}
+
+.fileSelector {
+    grid-row: 2;
+    align-self: start;
+    padding: 0 1rem;
+}
+
+.singleFileFilename {
+    overflow-wrap: anywhere;
+}
+
+.moreInformationLink {
+    grid-row: 3;
+    align-self: end;
+    justify-self: center;
+    margin: 0.75rem 1rem 0;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.localFileCard {
+    grid-template-rows: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem;
+}
+
+.localFileRadio {
+    position: static;
+    z-index: auto;
+    grid-column: 1;
+}
+
+.localFileIcons {
+    grid-row: 1;
+    grid-column: 3;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0 0.5rem;
+    font-size: 2rem;
+}
+
+.localFileSelector {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+}

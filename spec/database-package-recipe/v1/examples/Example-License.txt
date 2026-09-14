@@ -1,0 +1,3 @@
+Example License
+
+Permission is granted to use this example.

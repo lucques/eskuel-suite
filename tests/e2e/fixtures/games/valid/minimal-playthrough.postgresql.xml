@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game format-version='2' db-system='postgresql' db-system-min-version='14.0.0'>
+    <head>
+        <title>Minimal PostgreSQL Playthrough E2E</title>
+        <teaser>A minimal PostgreSQL game for the browser play-through test.</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Welcome to the minimal PostgreSQL game.</text>
+        </text-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>List every item.</text>
+            <sql-solution>SELECT name FROM items ORDER BY id</sql-solution>
+            <sql-placeholder>SELECT</sql-placeholder>
+        </select-scene>
+        <manipulate-scene>
+            <text>Collect the key.</text>
+            <sql-solution>UPDATE items SET collected = TRUE WHERE name = 'key'</sql-solution>
+            <sql-check>SELECT name, collected FROM items ORDER BY id</sql-check>
+            <sql-placeholder>UPDATE</sql-placeholder>
+        </manipulate-scene>
+        <text-scene>
+            <text>You finished the minimal PostgreSQL game.</text>
+        </text-scene>
+    </scenes>
+    <initial-sql-script>
+        -- eskuel:system=postgresql
+        -- eskuel:systemMinVersion=14.0.0
+        CREATE TABLE items (
+            id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            name TEXT NOT NULL,
+            collected BOOLEAN NOT NULL DEFAULT FALSE
+        );
+        INSERT INTO items (name) VALUES
+            ('hammer'),
+            ('key');
+    </initial-sql-script>
+</game>

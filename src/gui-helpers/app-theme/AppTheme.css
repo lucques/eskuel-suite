@@ -1,0 +1,122 @@
+[data-bs-theme='light'] .localTheme {
+    --bs-primary: var(--local-base-color);
+    --bs-primary-rgb: var(--local-base-color-rgb);
+
+    --primary-100: color-mix(in srgb, var(--local-base-color) 15%, white);
+    --primary-200: color-mix(in srgb, var(--local-base-color) 30%, white);
+    --primary-300: color-mix(in srgb, var(--local-base-color) 50%, white);
+    --primary-400: color-mix(in srgb, var(--local-base-color) 75%, white);
+    --primary-500: var(--local-base-color);
+    --primary-600: color-mix(in srgb, var(--local-base-color) 85%, black);
+    --primary-700: color-mix(in srgb, var(--local-base-color) 70%, black);
+    --primary-800: color-mix(in srgb, var(--local-base-color) 55%, black);
+    --primary-900: color-mix(in srgb, var(--local-base-color) 40%, black);
+
+    --bs-primary-text-emphasis: var(--primary-900);
+    --bs-primary-bg-subtle: var(--primary-300);
+    --bs-primary-border-subtle: var(--primary-600);
+    --bs-link-color: rgb(var(--local-link-color-rgb));
+    --bs-link-color-rgb: var(--local-link-color-rgb);
+    --bs-link-hover-color: rgb(var(--local-link-hover-color-rgb));
+    --bs-link-hover-color-rgb: var(--local-link-hover-color-rgb);
+}
+
+[data-bs-theme='dark'] .localTheme {
+    --bs-primary: var(--local-base-color-dark);
+    --bs-primary-rgb: var(--local-base-color-dark-rgb);
+    --eskuel-button-group-separator-color: color-mix(in srgb, var(--bs-body-bg) 84%, var(--bs-emphasis-color) 16%);
+
+    --primary-100: color-mix(in srgb, var(--local-base-color-dark) 15%, white);
+    --primary-200: color-mix(in srgb, var(--local-base-color-dark) 30%, white);
+    --primary-300: color-mix(in srgb, var(--local-base-color-dark) 50%, white);
+    --primary-400: color-mix(in srgb, var(--local-base-color-dark) 75%, white);
+    --primary-500: var(--local-base-color-dark);
+    --primary-600: color-mix(in srgb, var(--local-base-color-dark) 85%, black);
+    --primary-700: color-mix(in srgb, var(--local-base-color-dark) 70%, black);
+    --primary-800: color-mix(in srgb, var(--local-base-color-dark) 55%, black);
+    --primary-900: color-mix(in srgb, var(--local-base-color-dark) 40%, black);
+
+    --bs-primary-text-emphasis: var(--primary-300);
+    --bs-primary-bg-subtle: var(--primary-800);
+    --bs-primary-border-subtle: var(--primary-900);
+    --bs-link-color: rgb(var(--local-link-color-dark-rgb));
+    --bs-link-color-rgb: var(--local-link-color-dark-rgb);
+    --bs-link-hover-color: rgb(var(--local-link-hover-color-dark-rgb));
+    --bs-link-hover-color-rgb: var(--local-link-hover-color-dark-rgb);
+}
+
+[data-bs-theme='dark'] .localTheme .btn-group > :not(.btn-check:first-child) + .btn,
+[data-bs-theme='dark'] .localTheme .btn-group > .btn-group:not(:first-child) > .btn {
+    border-left-color: var(--eskuel-button-group-separator-color);
+}
+
+[data-bs-theme='dark'] .localTheme .btn-group > .btn:not(:last-child),
+[data-bs-theme='dark'] .localTheme .btn-group > .btn-group:not(:last-child) > .btn {
+    border-right-color: var(--eskuel-button-group-separator-color);
+}
+
+[data-bs-theme='dark'] .localTheme .btn-group-vertical > .btn:not(:first-child),
+[data-bs-theme='dark'] .localTheme .btn-group-vertical > .btn-group:not(:first-child) > .btn {
+    border-top-color: var(--eskuel-button-group-separator-color);
+}
+
+[data-bs-theme='dark'] .localTheme .btn-group-vertical > .btn:not(:last-child),
+[data-bs-theme='dark'] .localTheme .btn-group-vertical > .btn-group:not(:last-child) > .btn {
+    border-bottom-color: var(--eskuel-button-group-separator-color);
+}
+
+.localTheme {
+    --bs-focus-ring-color: rgba(var(--bs-primary-rgb), 0.25);
+    --bs-form-valid-color: var(--bs-primary-text-emphasis);
+    --bs-form-valid-border-color: var(--bs-primary-border-subtle);
+}
+
+.localTheme .btn-primary:not([data-subtle-variant]) {
+    --bs-btn-color: var(--bs-primary-text-emphasis);
+    --bs-btn-bg: var(--bs-primary);
+    --bs-btn-border-color: var(--bs-primary-border-subtle);
+    --bs-btn-hover-color: var(--bs-primary-text-emphasis);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--bs-primary) 78%, var(--bs-emphasis-color));
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-primary-border-subtle) 72%, var(--bs-emphasis-color));
+    --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+    --bs-btn-active-color: var(--bs-primary-text-emphasis);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bs-primary) 58%, var(--bs-emphasis-color));
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bs-primary-border-subtle) 58%, var(--bs-emphasis-color));
+    --bs-btn-disabled-color: var(--bs-primary-text-emphasis);
+    --bs-btn-disabled-bg: var(--bs-primary);
+    --bs-btn-disabled-border-color: var(--bs-primary-border-subtle);
+}
+
+.localTheme :is(.form-control, .form-select, .form-check-input):focus {
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.localTheme .form-check-input:checked,
+.localTheme .form-check-input[type='checkbox']:indeterminate {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary-border-subtle);
+}
+
+.localTheme .nav-pills {
+    --bs-nav-pills-link-active-color: var(--bs-primary-text-emphasis);
+    --bs-nav-pills-link-active-bg: var(--bs-primary);
+}
+
+.localTheme .dropdown-menu {
+    --bs-dropdown-link-active-color: var(--bs-primary-text-emphasis);
+    --bs-dropdown-link-active-bg: var(--bs-primary);
+}
+
+.localTheme .list-group {
+    --bs-list-group-active-color: var(--bs-primary-text-emphasis);
+    --bs-list-group-active-bg: var(--bs-primary);
+    --bs-list-group-active-border-color: var(--bs-primary-border-subtle);
+}
+
+.localTheme .pagination {
+    --bs-pagination-active-color: var(--bs-primary-text-emphasis);
+    --bs-pagination-active-bg: var(--bs-primary);
+    --bs-pagination-active-border-color: var(--bs-primary-border-subtle);
+    --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game format-version="2" db-system="postgresql" db-system-min-version="14.0.0">
+    <head>
+        <title>Pokémon Adventure (PostgreSQL)</title>
+        <teaser>A minimal packaged Eskuel game using PostgreSQL</teaser>
+        <copyright>Example released with Eskuel Suite</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Welcome to the PostgreSQL Pokémon database adventure.</text>
+        </text-scene>
+        <select-scene>
+            <text>Return every student.</text>
+            <sql-solution>SELECT * FROM students</sql-solution>
+        </select-scene>
+    </scenes>
+</game>

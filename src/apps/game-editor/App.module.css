@@ -1,0 +1,4 @@
+/* Panel content owns scrolling; split views must not add scroll ancestors for scene dragging. */
+.dockLayout :global(.dv-split-view-container .dv-view-container .dv-view) {
+    overflow: hidden;
+}

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game>
+    <head>
+        <title>No database</title>
+        <teaser>A game backed by an empty database</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Select true</text>
+            <sql-solution>SELECT TRUE</sql-solution>
+            <sql-placeholder>SELECT</sql-placeholder>
+        </select-scene>
+    </scenes>
+</game>

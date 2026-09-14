@@ -1,0 +1,83 @@
+.schema {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 1.5rem;
+    row-gap: 0;
+    min-height: 100%;
+}
+
+:global([data-bs-theme='dark']) .schema table {
+    --bs-table-bg: transparent;
+}
+
+.tables {
+    flex: 1 1 20rem;
+    min-width: 0;
+}
+
+.tables table {
+    margin-bottom: 0;
+}
+
+.key {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.keyTable {
+    border-collapse: collapse;
+    font-size: 0.875em;
+}
+
+.keyMarker {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.keySeparator {
+    padding-right: 0.25rem;
+    padding-left: 0.25rem;
+    text-align: center;
+}
+
+.keyLabel {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.keyArrow {
+    font-size: 0.8em;
+    vertical-align: 0.1em;
+}
+
+.schema .tableName {
+    text-align: right;
+    font-weight: bold;
+
+    padding-right: 0;
+}
+
+.schema .tableCols {
+    padding-left: 3px;
+}
+
+.tables td {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+.schema .primaryKey {
+    text-decoration: underline;    
+}
+
+.schema .column {
+    white-space: nowrap;
+}
+
+.schema .foreignKeyArrow {
+    display: inline-block;
+    margin-right: 0.1rem;
+    font-size: 0.8em;
+    vertical-align: 0.1em;
+}

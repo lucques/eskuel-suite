@@ -1,0 +1,26 @@
+.resultWrapper {
+    box-sizing: border-box;
+    min-width: 100%;
+    width: max-content;
+}
+
+.resultListGroup {
+    width: 100%;
+}
+
+.resultHeader {
+    gap: 8px;
+    padding-right: var(--bs-list-group-item-padding-y);
+}
+
+.resultSql {
+    margin-bottom: 0;
+}
+
+.resultTable {
+    margin-bottom: 0;
+}
+
+.centeredItem {
+    text-align: center;
+}

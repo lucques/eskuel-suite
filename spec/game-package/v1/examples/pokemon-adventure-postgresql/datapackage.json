@@ -1,0 +1,55 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/game-package/v1/datapackage.schema.json",
+    "name": "pokemon-adventure-postgresql",
+    "title": "Pokémon Adventure (PostgreSQL)",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Eskuel Suite contributors",
+            "roles": [
+                "creator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "MIT",
+            "path": "LICENSES/MIT.txt",
+            "title": "MIT License"
+        }
+    ],
+    "notices": [
+        {
+            "title": "Third-party names notice",
+            "path": "NOTICES/THIRD-PARTY-RIGHTS.txt"
+        }
+    ],
+    "provenance": {
+        "path": "PROVENANCE.json",
+        "mediatype": "application/json"
+    },
+    "sources": [
+        {
+            "title": "Eskuel Suite example game",
+            "path": "https://github.com/lucques/eskuel-suite"
+        }
+    ],
+    "resources": [
+        {
+            "name": "game",
+            "path": "data/pokemon-adventure-postgresql.xml",
+            "format": "xml",
+            "mediatype": "application/xml",
+            "bytes": 652,
+            "hash": "sha256:8c7c135d783e922af91e6299e5a5a87af2031e0a9b1d444acb70ac4df4833d1b"
+        },
+        {
+            "name": "database",
+            "path": "dependencies/database.eskueldb",
+            "format": "eskueldb",
+            "mediatype": "application/zip",
+            "bytes": 1663,
+            "hash": "sha256:699a3563686d8021161f07f2bd96730c06dfe55b6b78b416a849f127c3aa0cda"
+        }
+    ]
+}

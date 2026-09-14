@@ -1,0 +1,40 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/game-package-recipe/v1/recipe.schema.json",
+    "name": "example-game",
+    "title": "Example game",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Example author",
+            "roles": [
+                "creator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "CC0-1.0",
+            "title": "CC0 1.0 Universal",
+            "path": "LICENSES/CC0-1.0.txt",
+            "inputPath": "CC0-1.0.txt"
+        }
+    ],
+    "notices": [
+        {
+            "title": "Third-party rights notice",
+            "path": "NOTICES/THIRD-PARTY-RIGHTS.txt",
+            "inputPath": "THIRD-PARTY-RIGHTS.txt"
+        }
+    ],
+    "provenance": {
+        "path": "PROVENANCE.json",
+        "mediatype": "application/json",
+        "inputPath": "PROVENANCE.json"
+    },
+    "sources": [
+        {
+            "title": "Example source",
+            "path": "https://example.com/game"
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+.button {
+    align-items: center;
+    appearance: none;
+    border: 0;
+    border-radius: 2px;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    line-height: 0;
+    padding: 4px;
+}
+
+.default {
+    background-color: transparent;
+}
+
+.hover,
+.button:hover,
+.button:focus-visible {
+    background-color: var(--dv-icon-hover-background-color);
+}
+
+.button:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
+}

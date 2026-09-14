@@ -1,0 +1,20 @@
+.notice {
+    align-items: center;
+    align-self: stretch;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    max-width: 100%;
+    padding-right: var(--bs-alert-padding-y);
+    width: 100%;
+    --bs-alert-padding-y: 0.5rem;
+    --bs-alert-border-color: color-mix(in srgb, var(--bs-alert-bg) 80%, var(--bs-alert-color));
+}
+
+.message {
+    min-width: 0;
+}
+
+.closeButton {
+    flex: 0 0 auto;
+}

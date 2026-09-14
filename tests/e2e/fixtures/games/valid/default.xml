@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game>
+    <head>
+        <title>Default E2E Game</title>
+        <teaser>A suite-owned default game for application startup tests.</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Welcome to the default E2E game.</text>
+        </text-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>List every item.</text>
+            <sql-solution>SELECT name FROM items ORDER BY id</sql-solution>
+            <sql-placeholder>SELECT name FROM items ORDER BY id</sql-placeholder>
+        </select-scene>
+        <text-scene>
+            <text>The fixture task follows next.</text>
+        </text-scene>
+        <text-scene>
+            <text>Proceed to the fixture task.</text>
+        </text-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Count every item.</text>
+            <sql-solution>SELECT COUNT(*) AS item_count FROM items</sql-solution>
+            <sql-placeholder>SELECT COUNT(*) AS item_count FROM items</sql-placeholder>
+        </select-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE items (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+        INSERT INTO items VALUES
+            (1, 'hammer'),
+            (2, 'key');
+    </initial-sql-script>
+</game>

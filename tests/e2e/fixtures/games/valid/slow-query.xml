@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game>
+    <head>
+        <title>Slow Query E2E</title>
+        <teaser>A minimal game for observing a long-running query</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Run the deliberately slow query.</text>
+            <sql-solution><![CDATA[
+WITH RECURSIVE counter(value) AS (
+    SELECT 0
+    UNION ALL
+    SELECT value + 1
+    FROM counter
+    WHERE value < 2000000
+)
+SELECT CASE WHEN SUM(value) >= 0 THEN 'completed' END AS status
+FROM counter
+            ]]></sql-solution>
+            <sql-placeholder><![CDATA[
+WITH RECURSIVE counter(value) AS (
+    SELECT 0
+    UNION ALL
+    SELECT value + 1
+    FROM counter
+    WHERE value < 2000000
+)
+SELECT CASE WHEN SUM(value) >= 0 THEN 'completed' END AS status
+FROM counter
+            ]]></sql-placeholder>
+        </select-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE marker (value INTEGER NOT NULL);
+        INSERT INTO marker VALUES (1);
+    </initial-sql-script>
+</game>

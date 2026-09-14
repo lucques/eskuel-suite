@@ -1,0 +1,32 @@
+import {
+    BrowserApp, GameConsoleApp, GameEditorApp,
+    assertDatabaseCatalog, assertGameCatalog, supportedLanguages,
+    type AppLink, type LocalizedLink, type Language,
+    type CatalogFile, type CatalogLocalization,
+    type DatabaseCatalogEntry, type GameCatalogEntry,
+    type AppComponentOptions, type BrowserAppOptions,
+    type GameConsoleAppOptions, type GameEditorAppOptions,
+} from 'eskuel-suite';
+import 'eskuel-suite/style.css';
+
+const file: CatalogFile = { url: '/game.xml', filename: 'game.xml' };
+const localization: CatalogLocalization = { title: 'Game', files: [file] };
+const game: GameCatalogEntry = { id: 'game', localizations: { en: localization } };
+const database: DatabaseCatalogEntry = { id: 'database', localizations: {} };
+const link: AppLink = { title: 'Home', url: '/' };
+const localizedLink: LocalizedLink = { en: link, de: link };
+const language: Language = supportedLanguages[0];
+const shared: AppComponentOptions = { linksRight: [localizedLink] };
+const browserOptions: BrowserAppOptions = { ...shared, databaseCatalog: [database] };
+const consoleOptions: GameConsoleAppOptions = { ...shared, gameCatalog: [game] };
+const editorOptions: GameEditorAppOptions = { ...shared, gameCatalog: [game] };
+assertDatabaseCatalog([database]);
+assertGameCatalog([game]);
+new BrowserApp(language, browserOptions).init();
+new GameConsoleApp(language, consoleOptions).init();
+new GameEditorApp(language, editorOptions).init();
+
+// @ts-expect-error The public language set is finite.
+const invalidLanguage: Language = 'fr';
+// @ts-expect-error Every navigation link needs a German localization too.
+const invalidLink: LocalizedLink = { en: link };

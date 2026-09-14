@@ -1,0 +1,57 @@
+.commandButtonContent {
+    display: inline-grid;
+    min-width: 1rem;
+    place-items: center;
+}
+
+.commandButtonContent > * {
+    grid-area: 1 / 1;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hiddenLabel {
+    visibility: hidden;
+}
+
+.cancelButtonContent {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cancelButtonTooltipTarget {
+    display: inline-flex;
+}
+
+.cancelButtonTooltipTarget[hidden] {
+    display: none;
+}
+
+.cancelButtonDisabled {
+    pointer-events: none;
+}
+
+.indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cancelIndicator {
+    display: none;
+}
+
+.cancellable:hover .spinnerIndicator,
+.cancellable:focus-visible .spinnerIndicator {
+    display: none;
+}
+
+.cancellable:hover .cancelIndicator,
+.cancellable:focus-visible .cancelIndicator {
+    display: inline-flex;
+}

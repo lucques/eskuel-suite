@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game>
+    <head>
+        <teaser>Missing title</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Introduction</text>
+        </text-scene>
+    </scenes>
+</game>

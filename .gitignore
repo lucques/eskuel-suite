@@ -1,2 +1,5 @@
 node_modules
 dist
+dist-cli
+public/ext
+test-artifacts

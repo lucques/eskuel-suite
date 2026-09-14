@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game>
+    <head>
+        <title>Multiple Manipulations E2E</title>
+        <teaser>A game that builds one table across several manipulation scenes.</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Add four entries and occasionally inspect the newest one.</text>
+        </text-scene>
+        <manipulate-scene>
+            <text>Add the Alpha entry.</text>
+            <sql-solution>INSERT INTO entries (label) VALUES ('Alpha')</sql-solution>
+            <sql-check>SELECT count(*) FROM entries</sql-check>
+            <sql-placeholder>INSERT INTO entries (label) VALUES ('Alpha')</sql-placeholder>
+        </manipulate-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Get the entry with the highest ID.</text>
+            <sql-solution>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-solution>
+            <sql-placeholder>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-placeholder>
+        </select-scene>
+        <manipulate-scene>
+            <text>Add the Beta entry.</text>
+            <sql-solution>INSERT INTO entries (label) VALUES ('Beta')</sql-solution>
+            <sql-check>SELECT count(*) FROM entries</sql-check>
+            <sql-placeholder>INSERT INTO entries (label) VALUES ('Beta')</sql-placeholder>
+        </manipulate-scene>
+        <manipulate-scene>
+            <text>Add the Gamma entry.</text>
+            <sql-solution>INSERT INTO entries (label) VALUES ('Gamma')</sql-solution>
+            <sql-check>SELECT count(*) FROM entries</sql-check>
+            <sql-placeholder>INSERT INTO entries (label) VALUES ('Gamma')</sql-placeholder>
+        </manipulate-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Get the new entry with the highest ID.</text>
+            <sql-solution>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-solution>
+            <sql-placeholder>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-placeholder>
+        </select-scene>
+        <manipulate-scene>
+            <text>Add the Delta entry.</text>
+            <sql-solution>INSERT INTO entries (label) VALUES ('Delta')</sql-solution>
+            <sql-check>SELECT count(*) FROM entries</sql-check>
+            <sql-placeholder>INSERT INTO entries (label) VALUES ('Delta')</sql-placeholder>
+        </manipulate-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>Get the final entry with the highest ID.</text>
+            <sql-solution>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-solution>
+            <sql-placeholder>SELECT label FROM entries WHERE id = (SELECT MAX(id) FROM entries)</sql-placeholder>
+        </select-scene>
+        <text-scene>
+            <text>All four entries have been added.</text>
+        </text-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL
+        );
+    </initial-sql-script>
+</game>

@@ -1,1 +1,0 @@
-SELC some nonsense;

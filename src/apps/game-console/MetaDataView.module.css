@@ -1,0 +1,17 @@
+.metaDataBlock {
+    float: left;
+    max-width: min(420px, 45%);
+    margin: 0 30px 16px 0;
+}
+
+.metaDataTitle h1 {
+    margin-bottom: 8px;
+}
+
+.metaDataSub {
+    font-size: smaller;
+}
+
+.teaser {
+    margin-bottom: 16px;
+}

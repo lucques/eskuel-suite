@@ -1,0 +1,55 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/game-package/v1/datapackage.schema.json",
+    "name": "pokemon-adventure",
+    "title": "Pokémon Adventure",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Eskuel Suite contributors",
+            "roles": [
+                "creator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "MIT",
+            "path": "LICENSES/MIT.txt",
+            "title": "MIT License"
+        }
+    ],
+    "notices": [
+        {
+            "title": "Third-party names notice",
+            "path": "NOTICES/THIRD-PARTY-RIGHTS.txt"
+        }
+    ],
+    "provenance": {
+        "path": "PROVENANCE.json",
+        "mediatype": "application/json"
+    },
+    "sources": [
+        {
+            "title": "Eskuel Suite example game",
+            "path": "https://github.com/lucques/eskuel-suite"
+        }
+    ],
+    "resources": [
+        {
+            "name": "game",
+            "path": "data/pokemon-adventure.xml",
+            "format": "xml",
+            "mediatype": "application/xml",
+            "bytes": 606,
+            "hash": "sha256:ae9d83e97228ff14e67c2f47acab2c0b643c82129d3b99855ebbe4484ed58148"
+        },
+        {
+            "name": "database",
+            "path": "dependencies/database.eskueldb",
+            "format": "eskueldb",
+            "mediatype": "application/zip",
+            "bytes": 1624,
+            "hash": "sha256:e42416b97a943489faa7637e3a388802db86c740b0ef542b3a60a927ee132d42"
+        }
+    ]
+}

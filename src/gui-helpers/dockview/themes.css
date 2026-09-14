@@ -1,0 +1,103 @@
+.dockview-theme-light-without-gap {
+    --dv-active-sash-transition-delay: 0.5s !important;
+    --dv-sash-color: transparent !important;
+    --dv-active-sash-color: transparent !important;
+    --dv-separator-border: rgba(51, 51, 51, 0.35) !important;
+
+    --dv-custom-border-width: 0px; /* no extra border; separator-border is already visible */
+}
+
+.dockview-theme-light-without-gap-short {
+    --dv-active-sash-transition-delay: 0.5s !important;
+    --dv-sash-color: transparent !important;
+    --dv-active-sash-color: transparent !important;
+    --dv-separator-border: rgba(51, 51, 51, 0.35) !important;
+
+    --dv-custom-border-width: 0px; /* no extra border; separator-border is already visible */
+
+    --dv-tabs-and-actions-container-height: 30px !important;
+    --dv-tabs-and-actions-container-background-color: transparent !important;
+    --dv-activegroup-hiddenpanel-tab-background-color: transparent !important;
+    --dv-inactivegroup-hiddenpanel-tab-background-color: transparent !important;
+}
+
+.dockview-theme-light-without-gap-short .dv-tab {
+    padding-bottom: 2px;
+}
+
+.dockview-theme-light-without-gap-short .dv-tab .widget-tab-title {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    padding-bottom:0.25rem;
+    border-bottom: 2px solid transparent;
+}
+
+.dockview-theme-light-without-gap-short .dv-tab.dv-active-tab .widget-tab-title {
+    border-color: rgb(181, 181, 181);
+}
+
+.dockview-theme-dark-without-gap {
+    --dv-active-sash-transition-delay: 0.5s !important;
+    --dv-sash-color: transparent !important;
+    --dv-active-sash-color: transparent !important;
+    --dv-separator-border: rgb(68, 68, 68) !important;
+
+    --dv-custom-border-width: 0px; /* no extra border; separator-border is already visible */
+}
+
+.dockview-theme-dark-without-gap-short {
+    --dv-active-sash-transition-delay: 0.5s !important;
+    --dv-sash-color: transparent !important;
+    --dv-active-sash-color: transparent !important;
+    --dv-separator-border: rgb(68, 68, 68) !important;
+
+    --dv-custom-border-width: 0px; /* no extra border; separator-border is already visible */
+
+    --dv-tabs-and-actions-container-height: 30px !important;
+    --dv-tabs-and-actions-container-background-color: transparent !important;
+    --dv-activegroup-hiddenpanel-tab-background-color: transparent !important;
+    --dv-inactivegroup-hiddenpanel-tab-background-color: transparent !important;
+}
+
+.dockview-theme-dark-without-gap-short .dv-tab {
+    padding-bottom: 2px;
+}
+
+.dockview-theme-dark-without-gap-short .dv-tab .widget-tab-title {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    padding-bottom:0.25rem;
+    border-bottom: 2px solid transparent;
+}
+
+.dockview-theme-dark-without-gap-short .dv-tab.dv-active-tab .widget-tab-title {
+    border-color: rgb(181, 181, 181);
+}
+
+.dockview-theme-light-with-gap {
+    --dv-active-sash-transition-delay: 0s !important;
+    --dv-sash-color: rgb(231, 231, 231) !important;
+    --dv-active-sash-color: rgb(201, 201, 201) !important;
+    --dv-separator-border: transparent !important;
+
+    --dv-custom-border-width: 1px;
+}
+
+.dockview-theme-dark-with-gap {
+    --dv-active-sash-transition-delay: 0s !important;
+    --dv-sash-color: rgb(50, 50, 50) !important;
+    --dv-active-sash-color: rgb(93, 93, 93) !important;
+    --dv-separator-border: transparent !important;
+
+    --dv-custom-border-width: 1px;
+}
+
+.dv-groupview {
+    border:var(--dv-custom-border-width) solid rgb(184, 184, 184);
+}
+
+.dv-tab {
+    padding-right: 0.25rem;
+}

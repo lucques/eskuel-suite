@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+    <xs:simpleType name="db-system">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="sqlite" />
+            <xs:enumeration value="postgresql" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="db-systemVersion">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="booleanLiteral">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="true" />
+            <xs:enumeration value="false" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="imageMediaType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="image/png" />
+            <xs:enumeration value="image/jpeg" />
+            <xs:enumeration value="image/webp" />
+            <xs:enumeration value="image/avif" />
+            <xs:enumeration value="image/gif" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="headType">
+        <xs:sequence>
+            <xs:element name="title" type="xs:string" />
+            <xs:element name="teaser" type="xs:string" />
+            <xs:element name="copyright" type="xs:string" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="textSceneType">
+        <xs:sequence>
+            <xs:element name="text" type="xs:string" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="imageSceneType">
+        <xs:simpleContent>
+            <xs:extension base="xs:base64Binary">
+                <xs:attribute name="media-type" type="imageMediaType" use="required" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="selectSceneType">
+        <xs:sequence>
+            <xs:element name="text" type="xs:string" />
+            <xs:element name="sql-solution" type="xs:string" />
+            <xs:element name="sql-placeholder" type="xs:string" minOccurs="0" />
+        </xs:sequence>
+        <xs:attribute name="is-row-order-relevant" type="booleanLiteral" default="false" />
+        <xs:attribute name="is-col-order-relevant" type="booleanLiteral" default="false" />
+        <xs:attribute name="are-col-names-relevant" type="booleanLiteral" default="false" />
+    </xs:complexType>
+
+    <xs:complexType name="manipulateSceneType">
+        <xs:sequence>
+            <xs:element name="text" type="xs:string" />
+            <xs:element name="sql-solution" type="xs:string" />
+            <xs:element name="sql-check" type="xs:string" />
+            <xs:element name="sql-placeholder" type="xs:string" minOccurs="0" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="scenesType">
+        <xs:choice minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="text-scene" type="textSceneType" />
+            <xs:element name="image-scene" type="imageSceneType" />
+            <xs:element name="select-scene" type="selectSceneType" />
+            <xs:element name="manipulate-scene" type="manipulateSceneType" />
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:element name="game">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="head" type="headType" />
+                <xs:element name="scenes" type="scenesType" />
+                <xs:choice minOccurs="0">
+                    <xs:element name="initial-sql-script" type="xs:string" />
+                    <xs:element name="sqlite-db" type="xs:base64Binary" />
+                </xs:choice>
+            </xs:sequence>
+            <xs:attribute name="format-version" type="xs:string" use="required" fixed="1" />
+            <xs:attribute name="db-system" type="db-system" use="required" />
+            <xs:attribute name="db-system-min-version" type="db-systemVersion" use="required" />
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

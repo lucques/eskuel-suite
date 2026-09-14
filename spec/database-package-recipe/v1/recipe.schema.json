@@ -1,0 +1,178 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package-recipe/v1/recipe.schema.json",
+    "title": "Eskuel database-package authoring recipe 1",
+    "description": "The strict authoring input consumed by eskueldb pack to create one database-package v1 archive.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "$schema",
+        "name",
+        "title",
+        "version",
+        "contributors",
+        "licenses",
+        "resource"
+    ],
+    "properties": {
+        "$schema": {
+            "const": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package-recipe/v1/recipe.schema.json"
+        },
+        "name": {
+            "$ref": "../../database-package/v1/datapackage.schema.json#/properties/name"
+        },
+        "title": {
+            "$ref": "../../database-package/v1/datapackage.schema.json#/properties/title"
+        },
+        "version": {
+            "$ref": "../../database-package/v1/datapackage.schema.json#/properties/version"
+        },
+        "contributors": {
+            "$ref": "../../database-package/v1/datapackage.schema.json#/properties/contributors"
+        },
+        "licenses": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "$ref": "#/definitions/recipeLicense"
+            }
+        },
+        "notices": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "$ref": "#/definitions/recipeNotice"
+            }
+        },
+        "provenance": {
+            "$ref": "#/definitions/recipeProvenance"
+        },
+        "sources": {
+            "$ref": "../../database-package/v1/datapackage.schema.json#/properties/sources"
+        },
+        "resource": {
+            "$ref": "#/definitions/recipeResource"
+        }
+    },
+    "definitions": {
+        "recipeLicense": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path",
+                "inputPath"
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/nonEmptyString"
+                },
+                "path": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/licensePath"
+                },
+                "title": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/nonEmptyString"
+                },
+                "inputPath": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseResource/properties/path"
+                }
+            }
+        },
+        "recipeNotice": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path",
+                "inputPath"
+            ],
+            "properties": {
+                "path": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/noticePath"
+                },
+                "title": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/nonEmptyString"
+                },
+                "inputPath": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseResource/properties/path"
+                }
+            }
+        },
+        "recipeProvenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "path",
+                "mediatype",
+                "inputPath"
+            ],
+            "properties": {
+                "path": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/provenancePath"
+                },
+                "mediatype": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/provenanceMediatype"
+                },
+                "inputPath": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseResource/properties/path"
+                }
+            }
+        },
+        "recipeResource": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "path",
+                "artifactType",
+                "system",
+                "systemMinVersion"
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/properties/name"
+                },
+                "path": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseResource/properties/path"
+                },
+                "artifactType": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseMetadata/properties/artifactType"
+                },
+                "system": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseMetadata/properties/system"
+                },
+                "systemMinVersion": {
+                    "$ref": "../../database-package/v1/datapackage.schema.json#/definitions/databaseMetadata/properties/systemMinVersion"
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "artifactType": {
+                                "const": "initial-sql-script"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "path": {
+                                "pattern": "\\.sql$"
+                            }
+                        }
+                    },
+                    "else": {
+                        "properties": {
+                            "path": {
+                                "pattern": "\\.sqlite$"
+                            },
+                            "system": {
+                                "const": "sqlite"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

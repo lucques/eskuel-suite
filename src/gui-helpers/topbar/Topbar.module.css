@@ -1,0 +1,146 @@
+.topbar {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+    align-items: center;
+    border: 1px solid var(--bs-primary-border-subtle);
+    border-radius: 8px 8px 0 0;
+    overflow: visible;
+    background-color: var(--bs-primary);
+    color: var(--bs-primary-text-emphasis);
+}
+
+.topbarTitle > div, .topbarActionsLeft > div, .topbarActionsRight > div, .topbarNavigation > div, .topbarNavigationMobile > div {
+    display: flex;
+    padding: 8px;
+}
+
+.topbarNavigationMobile {
+    display: none;
+}
+
+.topbarActions, .topbarNavigation {
+    background-color: color-mix(in srgb, var(--bs-primary) 50%, var(--bs-primary-bg-subtle) 50%);
+}
+
+.topbarActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.topbarTitle {
+    padding: 0 4px;
+    font-weight: 700;
+    color: var(--bs-primary-text-emphasis);
+}
+
+.topbarActions {
+    justify-content: space-between;
+
+    border-left: 1px solid var(--bs-primary-border-subtle);
+    border-right: 1px solid var(--bs-primary-border-subtle);
+}
+
+.topbarActionsLeft,
+.topbarActionsRight {
+    display: flex;
+    align-items: center;
+}
+
+.topbarActionsLeft {
+    flex: 0 0 auto;
+}
+
+.topbarActionsRight {
+    flex: 0 0 auto;
+}
+
+.topbarActionsRight > div {
+    gap: 4px;
+}
+
+.topbarActions :global(.btn-group) {
+    display: flex;
+    align-items: center;
+}
+
+.topbarNavigation {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top-right-radius: 8px;
+}
+
+.topbarNavigation > div {
+    padding-right: 12px;
+    padding-left: 12px;
+}
+
+.topbarToggle {
+    display: none;
+}
+
+@media (--compact) {
+    .topbar {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+
+    .topbarTitle > div,
+    .topbarActionsLeft > div,
+    .topbarActionsRight > div,
+    .topbarNavigation > div,
+    .topbarNavigationMobile > div {
+        padding: 4px;
+    }
+
+    .topbarActionsLeft > div {
+        padding-right: 0;
+    }
+
+    .topbarActionsLeft {
+        flex: 0 0 100%;
+    }
+
+    .topbarActions {
+        display: none;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-content: flex-start;
+        border-top: 1px solid var(--bs-primary-border-subtle);
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0;
+    }
+
+    .topbarActionsExpanded {
+        display: flex;
+    }
+
+    .topbarNavigation {
+        display: none;
+    }
+
+    .topbarNavigationMobile {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+    }
+
+    .topbarNavigationMobile > div {
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .topbarToggle {
+        align-self: stretch;
+        display: inline-flex;
+        grid-column: 3;
+        grid-row: 1;
+        align-items: center;
+        justify-content: center;
+        margin: 4px;
+    }
+
+}

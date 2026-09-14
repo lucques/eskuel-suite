@@ -1,0 +1,153 @@
+{
+    "about": {
+        "copyright": "Copyright © 2026 Lukas Convent",
+        "description": "The Eskuel Suite is a collection of apps for creating and working with SQL-targeted educational material.",
+        "full_license": "Full license text (GNU GPL v3)",
+        "license_notice": "This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 only.",
+        "source_code": "Source code",
+        "third_party_licenses": "Third-party software licenses",
+        "title": "About Eskuel Suite",
+        "version": "Version {{version}}",
+        "warranty_notice": "This program comes without any warranty. See the GNU GPL v3 for details."
+    },
+    "button": {
+        "open_database": "Open database",
+        "open_game": "Open game"
+    },
+    "confirm_leave": {
+        "body": "Do you really want to leave the app? Any SQL statements and results will be discarded.",
+        "leave": "Leave app",
+        "stay": "Stay",
+        "title": "Leave app?"
+    },
+    "confirm_save_changes": {
+        "dont_save": "Don't save"
+    },
+    "catalog_source": {
+        "load_database": "Load database from catalog",
+        "load_game": "Load game from catalog",
+        "no_database_for_language": "No database is currently available in {{language}}. You may want to try a different language.",
+        "no_game_for_language": "No game is currently available in {{language}}. You may want to try a different language.",
+        "select_file": "Select file for {{title}}"
+    },
+    "common": {
+        "add": "Add",
+        "cancel": "Cancel",
+        "cancelling": "Cancelling...",
+        "close": "Close",
+        "create": "Create",
+        "error": "Error",
+        "file_read_error": "The file could not be read. Please select it again.",
+        "file_too_large": "The file exceeds the {{limit}} MB limit.",
+        "licenses": "Licenses",
+        "loaded": "Loaded",
+        "loading": "Loading...",
+        "menu": "Menu",
+        "more_information": "More information",
+        "nothing_loaded": "Nothing loaded",
+        "open": "Open",
+        "open_file": "Open file",
+        "save": "Save",
+        "switch_to_dark_mode": "Switch to dark mode",
+        "switch_to_light_mode": "Switch to light mode"
+    },
+    "package_about": {
+        "contributor_roles": {
+            "package_maintainer_only": "only maintains the package"
+        },
+        "source_version": "Version: {{version}}"
+    },
+    "game_package_about": {
+        "contributors": "Contributors",
+        "database_artifact": "Database artifact",
+        "database_package": "Database package",
+        "database_rights": "Database licensing and provenance",
+        "database_system": "Database system",
+        "database_title": "Database title",
+        "description": "This information and the bundled texts travel with the game package. Game and database licensing are shown separately because the game package does not relicense its database dependency.",
+        "game_rights": "Game licensing and provenance",
+        "game_title": "Game title",
+        "import_notice": "This .eskuelgame package was imported as editable XML. Saving or exporting the XML does not preserve the package metadata or bundled licensing files.",
+        "licenses": "Licenses",
+        "notices": "Notices",
+        "package_name_and_version": "Package name and version",
+        "provenance": "Provenance",
+        "show": "Package information and licenses",
+        "sources": "Sources",
+        "title": "About {{title}}"
+    },
+    "game_source": {
+        "open_file_title": "Open game file",
+        "open_title": "Open game",
+        "unsupported_file_type": "Unsupported file type. Choose a .xml or .eskuelgame file."
+    },
+    "database_source": {
+        "unsupported_file_type": "Unsupported file type. Choose a .eskueldb, .sql, or SQLite database file (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3)."
+    },
+    "initialization": {
+        "database_engine_message": "The database engine encountered an internal error.",
+        "database_engine_title": "Database engine failed",
+        "database_fetch_message": "The database could not be opened from {{url}}.",
+        "database_fetch_title": "Database could not be opened",
+        "database_initialize_message": "The SQL initialization script could not be executed.",
+        "database_initialize_title": "Database initialization failed",
+        "database_metadata_message": "The Eskuel metadata header in the SQL file is invalid.",
+        "database_metadata_title": "SQL metadata is invalid",
+        "database_package_message": "The selected file is not a valid or supported Eskuel database package.",
+        "database_package_title": "Database package is invalid",
+        "database_system_message": "The database system {{system}} is not supported by the available database engine.",
+        "database_system_title": "Database system is not supported",
+        "database_read_message": "The selected file is not a valid or supported SQLite database.",
+        "database_read_title": "Database could not be opened",
+        "database_system_version_message": "The source requires {{system}} {{requiredMinVersion}} or later, but the available engine provides {{actualVersion}}.",
+        "database_system_version_title": "Database system version is not supported",
+        "database_too_large_message": "The database exceeds the configured file-size limit.",
+        "database_too_large_title": "Database is too large",
+        "game_fetch_message": "The game could not be opened from {{url}}.",
+        "game_fetch_title": "Game could not be opened",
+        "game_image_too_large_message": "The embedded image in scene {{sceneNumber}} exceeds the configured file-size limit.",
+        "game_image_too_large_title": "Game image is too large",
+        "game_image_dimensions_too_large_message": "The embedded image in scene {{sceneNumber}} exceeds the configured width or height limit.",
+        "game_image_dimensions_too_large_title": "Game image dimensions are too large",
+        "game_parse_message": "The selected file does not contain a valid game.",
+        "game_parse_title": "Game file is invalid",
+        "game_package_message": "The selected file is not a valid or supported Eskuel game package.",
+        "game_package_title": "Game package is invalid",
+        "game_too_large_message": "The game exceeds the configured file-size limit.",
+        "game_too_large_title": "Game is too large",
+        "session_error_message": "The current session can no longer continue safely.",
+        "session_error_title": "Session failed",
+        "technical_details": "Technical details",
+        "unexpected_message": "An unexpected error occurred while initializing the application.",
+        "unexpected_title": "Initialization failed"
+    },
+    "layout": {
+        "desktop": "Desktop",
+        "mobile": "Mobile",
+        "switch": "Switch layout"
+    },
+    "result": {
+        "error_message": "Error message",
+        "no_rows": "(Result contains no rows)",
+        "truncated_rows": "(Result was truncated after {{count}} rows)"
+    },
+    "session_notice": {
+        "browser_database_reset": "Query cancelled. Database reset to its initial state.",
+        "game_console_database_reset": "Database reset to the start of scene {{sceneNumber}}.",
+        "game_console_database_reset_after_cancellation": "Action cancelled. Database reset to the start of scene {{sceneNumber}}.",
+        "game_editor_database_reset": "Action cancelled. Database reset to its initial state.",
+        "game_editor_source_load_cancelled": "Opening the database was cancelled. The existing database was left unchanged."
+    },
+    "schema": {
+        "foreign_key": "Foreign key",
+        "foreign_key_primary_key_reference": "References the primary key in {{table}}",
+        "foreign_key_reference": "References {{column}} in {{table}}",
+        "no_tables": "No tables available",
+        "primary_key": "Primary key",
+        "underlined": "underlined"
+    },
+    "sql": {
+        "execute": "Execute",
+        "executing": "Executing SQL..."
+    }
+}

@@ -1,0 +1,28 @@
+.databaseView {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.databaseTitleBar {
+    align-items: center;
+    border-bottom: 1px solid var(--bs-dark-border-subtle);
+    display: flex;
+    flex: 0 0 auto;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 8px;
+}
+
+.databaseTitle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dockviewArea {
+    flex: 1 1 auto;
+    min-height: 0;
+}

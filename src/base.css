@@ -1,0 +1,18 @@
+/* Global styles used by the `index.html`/`main.tsx` default pages */
+
+html, body, #root {
+    height: 100%;
+    margin: 0;
+}
+
+#root {
+    margin: 0 auto;
+    padding: 1rem 2rem;
+}
+
+@media (--compact) {
+    #root {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

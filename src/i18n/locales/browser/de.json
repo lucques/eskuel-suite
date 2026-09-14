@@ -1,0 +1,26 @@
+{
+  "database_about": {
+    "artifact_type": "Datenbankartefakt",
+    "artifact_types": {
+      "database-file": "Datenbankdatei",
+      "initial-sql-script": "Initialisierungsskript"
+    },
+    "contributors": "Mitwirkende",
+    "database_system": "Datenbanksystem",
+    "database_title": "Titel",
+    "description": "Mit diesem Datenbankpaket bereitgestellte Informationen einschließlich Urheberangaben und Lizenzbedingungen.",
+    "licenses": "Lizenzen",
+    "mediatype": "Medientyp",
+    "notices": "Hinweise",
+    "open": "Über diese Datenbank",
+    "package_name_and_version": "Paketkennung und Version",
+    "provenance": "Herkunftsnachweis",
+    "sources": "Quellen",
+    "title": "Über {{title}}"
+  },
+  "no_database_opened": "Aktuell ist keine Datenbank geöffnet.",
+  "results_tab": "Ergebnisse",
+  "schema_tab": "Schema",
+  "sql_tab": "SQL",
+  "title": "SQL-Browser"
+}

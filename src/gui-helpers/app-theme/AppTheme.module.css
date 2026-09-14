@@ -1,0 +1,32 @@
+.browser {
+    --local-base-color-rgb: 155, 184, 205;
+    --local-base-color: rgb(var(--local-base-color-rgb));
+    --local-base-color-dark-rgb: 93, 110, 123;
+    --local-base-color-dark: rgb(var(--local-base-color-dark-rgb));
+    --local-link-color-rgb: 0, 110, 168;
+    --local-link-hover-color-rgb: 0, 84, 127;
+    --local-link-color-dark-rgb: 143, 179, 199;
+    --local-link-hover-color-dark-rgb: 171, 200, 216;
+}
+
+.gameConsole {
+    --local-base-color-rgb: 238, 199, 89;
+    --local-base-color: rgb(var(--local-base-color-rgb));
+    --local-base-color-dark-rgb: 143, 119, 53;
+    --local-base-color-dark: rgb(var(--local-base-color-dark-rgb));
+    --local-link-color-rgb: 134, 99, 0;
+    --local-link-hover-color-rgb: 102, 75, 0;
+    --local-link-color-dark-rgb: 238, 199, 89;
+    --local-link-hover-color-dark-rgb: 245, 217, 136;
+}
+
+.gameEditor {
+    --local-base-color-rgb: 177, 195, 129;
+    --local-base-color: rgb(var(--local-base-color-rgb));
+    --local-base-color-dark-rgb: 106, 117, 77;
+    --local-base-color-dark: rgb(var(--local-base-color-dark-rgb));
+    --local-link-color-rgb: 83, 114, 0;
+    --local-link-hover-color-rgb: 63, 87, 0;
+    --local-link-color-dark-rgb: 177, 195, 129;
+    --local-link-hover-color-dark-rgb: 203, 216, 170;
+}

@@ -1,0 +1,19 @@
+{
+    "extends": "./tsconfig.app.json",
+    "compilerOptions": {
+        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+        "types": [
+            "node",
+            "vite/client",
+            "vitest/globals",
+            "@vitest/browser/providers/playwright"
+        ]
+    },
+    "include": [
+        "src",
+        "tests",
+        "vitest.config.ts",
+        "playwright.config.ts",
+        "playwright.distribution.config.ts"
+    ]
+}

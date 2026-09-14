@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game format-version="1" db-system="sqlite" db-system-min-version="3.0.0">
+    <head>
+        <title>Minimal game</title>
+        <teaser>A minimal Eskuel game format 1 example</teaser>
+        <copyright>Example released with Eskuel Suite</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Welcome to the game.</text>
+        </text-scene>
+        <select-scene>
+            <text>Return the example value.</text>
+            <sql-solution>SELECT value FROM example</sql-solution>
+        </select-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE example (value INTEGER);
+        INSERT INTO example VALUES (1);
+    </initial-sql-script>
+</game>

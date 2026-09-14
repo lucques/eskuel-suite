@@ -1,0 +1,42 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package/v1/datapackage.schema.json",
+    "name": "example-school-sql",
+    "title": "Example school database initialization script",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Eskuel Suite contributors",
+            "roles": [
+                "creator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "MIT",
+            "path": "LICENSES/MIT.txt",
+            "title": "MIT License"
+        }
+    ],
+    "sources": [
+        {
+            "title": "Eskuel Suite example data",
+            "path": "https://github.com/lucques/eskuel-suite"
+        }
+    ],
+    "resources": [
+        {
+            "name": "example-school",
+            "path": "data/example-school.sql",
+            "format": "sql",
+            "mediatype": "application/sql",
+            "bytes": 190,
+            "hash": "sha256:5dce98adae8a2173fee39a99869550c2f4e5510b3c9d15f06d43c01b9500486b",
+            "eskuel:database": {
+                "artifactType": "initial-sql-script",
+                "system": "sqlite",
+                "systemMinVersion": "3.0.0"
+            }
+        }
+    ]
+}

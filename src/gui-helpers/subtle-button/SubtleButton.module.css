@@ -1,0 +1,104 @@
+.subtleButton {
+    --bs-btn-color: var(--bs-body-color);
+    --bs-btn-bg: var(--eskuel-button-surface-bg, color-mix(in srgb, var(--bs-body-bg) 94%, var(--bs-emphasis-color) 6%));
+    --bs-btn-border-color: var(--eskuel-button-surface-border-color, color-mix(in srgb, var(--bs-body-bg) 82%, var(--bs-emphasis-color) 18%));
+    --bs-btn-hover-color: var(--bs-body-color);
+    --bs-btn-hover-bg: var(--eskuel-button-surface-hover-bg, color-mix(in srgb, var(--bs-body-bg) 90%, var(--bs-emphasis-color) 10%));
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-btn-border-color) 72%, var(--bs-emphasis-color));
+    --bs-btn-active-color: var(--bs-body-color);
+    --bs-btn-active-bg: var(--eskuel-button-surface-active-bg, color-mix(in srgb, var(--bs-body-bg) 86%, var(--bs-emphasis-color) 14%));
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bs-btn-border-color) 58%, var(--bs-emphasis-color));
+    --bs-btn-disabled-color: var(--bs-secondary-color);
+    --bs-btn-disabled-bg: color-mix(in srgb, var(--bs-btn-bg) 88%, var(--bs-body-bg));
+    --bs-btn-disabled-border-color: color-mix(in srgb, var(--bs-btn-border-color) 88%, var(--bs-body-bg));
+    --bs-btn-disabled-opacity: 0.4;
+    --bs-btn-focus-shadow-rgb: var(--bs-secondary-rgb);
+}
+
+.subtleButton[data-subtle-size='xs'] {
+    --bs-btn-padding-y: 0.125rem;
+    --bs-btn-padding-x: 0.25rem;
+    --bs-btn-font-size: 0.75rem;
+}
+
+@media (--compact) {
+    .subtleButton[data-subtle-compact-size='xs'] {
+        --bs-btn-padding-y: 0.125rem;
+        --bs-btn-padding-x: 0.25rem;
+        --bs-btn-font-size: 0.75rem;
+        --bs-btn-border-radius: var(--bs-border-radius-sm);
+    }
+
+    .subtleButton[data-subtle-compact-size='sm'] {
+        --bs-btn-padding-y: 0.25rem;
+        --bs-btn-padding-x: 0.5rem;
+        --bs-btn-font-size: 0.875rem;
+        --bs-btn-border-radius: var(--bs-border-radius-sm);
+    }
+
+    .subtleButton[data-subtle-compact-size='md'] {
+        --bs-btn-padding-y: 0.375rem;
+        --bs-btn-padding-x: 0.75rem;
+        --bs-btn-font-size: 1rem;
+        --bs-btn-border-radius: var(--bs-border-radius);
+    }
+
+    .subtleButton[data-subtle-compact-size='lg'] {
+        --bs-btn-padding-y: 0.5rem;
+        --bs-btn-padding-x: 1rem;
+        --bs-btn-font-size: 1.25rem;
+        --bs-btn-border-radius: var(--bs-border-radius-lg);
+    }
+}
+
+.subtleButton[data-subtle-variant="primary"] {
+    --bs-btn-color: var(--bs-primary-text-emphasis);
+    --bs-btn-bg: var(--bs-primary);
+    --bs-btn-border-color: var(--bs-primary-border-subtle);
+    --bs-btn-hover-color: var(--bs-primary-text-emphasis);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--bs-primary) 78%, var(--bs-emphasis-color));
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-primary-border-subtle) 72%, var(--bs-emphasis-color));
+    --bs-btn-active-color: var(--bs-primary-text-emphasis);
+    --bs-btn-active-bg: color-mix(in srgb, var(--bs-primary) 58%, var(--bs-emphasis-color));
+    --bs-btn-active-border-color: color-mix(in srgb, var(--bs-primary-border-subtle) 58%, var(--bs-emphasis-color));
+    --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+.subtleButton[data-subtle-variant="secondary"] {
+    --bs-btn-color: var(--bs-secondary-text-emphasis, var(--bs-body-color));
+    --bs-btn-hover-color: var(--bs-secondary-text-emphasis, var(--bs-body-color));
+    --bs-btn-active-color: var(--bs-secondary-text-emphasis, var(--bs-body-color));
+}
+
+.subtleButton[data-subtle-variant="primary-subtle"] {
+    --eskuel-button-surface-bg: color-mix(in srgb, var(--bs-primary-bg-subtle) 40%, var(--bs-body-bg) 60%);
+    --eskuel-button-surface-hover-bg: color-mix(in srgb, var(--bs-primary-bg-subtle) 25%, var(--bs-body-bg) 75%);
+    --eskuel-button-surface-active-bg: color-mix(in srgb, var(--bs-primary-bg-subtle) 55%, var(--bs-body-bg) 45%);
+    --eskuel-button-surface-border-color: var(--bs-primary-border-subtle);
+    --bs-btn-color: var(--bs-primary-text-emphasis);
+    --bs-btn-hover-color: var(--bs-primary-text-emphasis);
+    --bs-btn-active-color: var(--bs-primary-text-emphasis);
+    --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+.subtleButton[data-subtle-variant="success-subtle"] {
+    --eskuel-button-surface-bg: color-mix(in srgb, var(--bs-success-bg-subtle) 40%, var(--bs-body-bg) 60%);
+    --eskuel-button-surface-hover-bg: color-mix(in srgb, var(--bs-success-bg-subtle) 25%, var(--bs-body-bg) 75%);
+    --eskuel-button-surface-active-bg: color-mix(in srgb, var(--bs-success-bg-subtle) 55%, var(--bs-body-bg) 45%);
+    --eskuel-button-surface-border-color: var(--bs-success-border-subtle);
+    --bs-btn-color: var(--bs-success-text-emphasis);
+    --bs-btn-hover-color: var(--bs-success-text-emphasis);
+    --bs-btn-active-color: var(--bs-success-text-emphasis);
+    --bs-btn-focus-shadow-rgb: var(--bs-success-rgb);
+}
+
+.subtleButton[data-subtle-variant="warning-subtle"] {
+    --eskuel-button-surface-bg: color-mix(in srgb, var(--bs-warning-bg-subtle) 40%, var(--bs-body-bg) 60%);
+    --eskuel-button-surface-hover-bg: color-mix(in srgb, var(--bs-warning-bg-subtle) 25%, var(--bs-body-bg) 75%);
+    --eskuel-button-surface-active-bg: color-mix(in srgb, var(--bs-warning-bg-subtle) 55%, var(--bs-body-bg) 45%);
+    --eskuel-button-surface-border-color: color-mix(in srgb, var(--bs-warning) 85%, black 15%);
+    --bs-btn-color: var(--bs-warning-text-emphasis);
+    --bs-btn-hover-color: var(--bs-warning-text-emphasis);
+    --bs-btn-active-color: var(--bs-warning-text-emphasis);
+    --bs-btn-focus-shadow-rgb: var(--bs-warning-rgb);
+}

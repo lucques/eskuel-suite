@@ -1,0 +1,13 @@
+.compactLabel {
+    display: none;
+}
+
+@media (--compact) {
+    .fullLabel {
+        display: none;
+    }
+
+    .compactLabel {
+        display: inline;
+    }
+}

@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game format-version='2' db-system='sqlite' db-system-min-version='3.0.0'>
+    <head>
+        <title>Minimal Playthrough E2E</title>
+        <teaser>A minimal game for the browser play-through test.</teaser>
+        <copyright>Test fixture</copyright>
+    </head>
+    <scenes>
+        <text-scene>
+            <text>Welcome to the minimal game.</text>
+        </text-scene>
+        <select-scene is-row-order-relevant='true' is-col-order-relevant='true' are-col-names-relevant='true'>
+            <text>List every item.</text>
+            <sql-solution>SELECT name FROM items ORDER BY id</sql-solution>
+            <sql-placeholder>SELECT</sql-placeholder>
+        </select-scene>
+        <manipulate-scene>
+            <text>Collect the key.</text>
+            <sql-solution>UPDATE items SET collected = 1 WHERE name = 'key'</sql-solution>
+            <sql-check>SELECT name, collected FROM items ORDER BY id</sql-check>
+            <sql-placeholder>UPDATE</sql-placeholder>
+        </manipulate-scene>
+        <text-scene>
+            <text>You finished the minimal game.</text>
+        </text-scene>
+    </scenes>
+    <initial-sql-script>
+        CREATE TABLE items (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            collected INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO items VALUES
+            (1, 'hammer', 0),
+            (2, 'key', 0);
+    </initial-sql-script>
+</game>

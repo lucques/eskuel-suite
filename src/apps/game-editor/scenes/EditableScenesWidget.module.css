@@ -1,0 +1,198 @@
+.editableScenesList {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+}
+
+.editableScenesContainer {
+    --scene-testing-controls-gap: 16px;
+    --scene-testing-controls-width: 2.125rem;
+}
+
+.sceneToolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    padding: 8px;
+    border-top: 1px solid var(--bs-dark-border-subtle);
+    border-bottom: 1px solid var(--bs-dark-border-subtle);
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+.sceneTypeCounts {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.sceneHistoryActions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.sceneHistoryActionTooltipTarget {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.sceneTypeCounts > :global(.badge) {
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+@media (--compact) {
+    .sceneToolbar {
+        padding: 4px;
+    }
+}
+
+.editableSceneViewHeader {
+    cursor: grab;
+    padding-left: 12px;
+    padding-right: var(--bs-list-group-item-padding-y);
+}
+
+.editableSceneViewHeader:active {
+    cursor: grabbing;
+}
+
+.editableScenesContainer .editableSceneViewHeader p {
+    margin-bottom: 0;
+}
+
+.sceneActions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.selectSceneColor {
+    --task-scene-color-rgb: 13, 110, 253;
+    background-color: rgba(var(--task-scene-color-rgb), var(--bs-bg-opacity)) !important;
+    border-color: var(--bs-blue) !important;
+}
+
+.taskSceneBadge {
+    background-color: rgb(var(--task-scene-color-rgb)) !important;
+}
+
+.manipulateSceneColor {
+    --task-scene-color-rgb: 253, 126, 20;
+    background-color: rgba(var(--task-scene-color-rgb), var(--bs-bg-opacity)) !important;
+    border-color: var(--bs-orange) !important;
+}
+
+.sceneInsertionControl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--scene-testing-controls-width);
+    column-gap: var(--scene-testing-controls-gap);
+    align-items: center;
+    justify-items: center;
+    min-height: 20px;
+}
+
+.editableScenesContainerWithoutTestingControls .sceneInsertionControl {
+    column-gap: 0;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.sceneInsertionIcon {
+    font-size: 0.75rem;
+}
+
+.editableScenesContainerDragging .sceneInsertionControl {
+    visibility: hidden;
+}
+
+.editableSceneWithTestingControls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--scene-testing-controls-gap);
+    align-items: center;
+}
+
+.editableScenesContainerWithoutTestingControls .editableSceneWithTestingControls {
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.sceneTestingControls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    width: var(--scene-testing-controls-width);
+    pointer-events: auto;
+}
+
+.sceneTestingControls:not(:empty)::before {
+    background-color: var(--bs-border-color);
+    content: '';
+    height: 3px;
+    pointer-events: none;
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: var(--scene-testing-controls-gap);
+}
+
+.sceneTestingButtonGroup {
+    width: 100%;
+}
+
+.sceneTestingDropdown {
+    width: 100%;
+}
+
+.sceneTestingDropdownToggle {
+    border-top-width: 0;
+    height: 1.25rem;
+    line-height: 1;
+    margin-top: 0 !important;
+    min-height: 0;
+    padding-bottom: 0;
+    padding-top: 0;
+}
+
+.unknownSceneTestIndicator {
+    display: inline-grid;
+    place-items: center;
+}
+
+.unknownSceneTestIndicator > * {
+    grid-area: 1 / 1;
+}
+
+.unknownSceneTestIcon {
+    display: none;
+}
+
+.unknownSceneTestButton:hover .unknownSceneStatusIcon,
+.unknownSceneTestButton:focus-visible .unknownSceneStatusIcon {
+    display: none;
+}
+
+.unknownSceneTestButton:hover .unknownSceneTestIcon,
+.unknownSceneTestButton:focus-visible .unknownSceneTestIcon {
+    display: inline-block;
+}
+
+.sceneTestingActionIndicator {
+    display: inline-block;
+    width: 1rem;
+}
+
+.gapDefault {
+    gap: 10px;
+}

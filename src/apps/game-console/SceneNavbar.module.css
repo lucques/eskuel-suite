@@ -1,0 +1,76 @@
+.sceneNavbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    border: 1px solid var(--bs-primary-border-subtle);
+    overflow: visible;
+    background-color: color-mix(in srgb, var(--bs-primary) 50%, var(--bs-primary-bg-subtle) 50%);
+    color: var(--bs-primary-text-emphasis);
+}
+
+.left > div,
+.centerLeft > div,
+.right > div {
+    display: flex;
+    padding: 8px;
+}
+
+.center {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-left: 1px solid var(--bs-primary-border-subtle);
+    border-right: 1px solid var(--bs-primary-border-subtle);
+}
+
+.left {
+    padding: 0 4px;
+    font-weight: 700;
+    color: var(--bs-primary-text-emphasis);
+}
+
+.centerLeft {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.centerLeft > div {
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.right {
+    display: flex;
+    justify-content: center;
+}
+
+.compactSceneTitle {
+    display: none;
+}
+
+@media (--compact) {
+    .left > div,
+    .centerLeft > div,
+    .right > div {
+        padding: 4px;
+    }
+
+    .center,
+    .centerLeft > div {
+        gap: 4px;
+    }
+
+    .sceneTitle {
+        display: none;
+    }
+
+    .compactSceneTitle {
+        display: inline;
+    }
+}

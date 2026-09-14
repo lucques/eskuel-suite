@@ -1,0 +1,42 @@
+{
+    "$schema": "https://raw.githubusercontent.com/lucques/eskuel-suite/master/spec/database-package/v1/datapackage.schema.json",
+    "name": "example-school-postgresql",
+    "title": "Example school PostgreSQL initialization script",
+    "version": "1.0.0",
+    "contributors": [
+        {
+            "title": "Eskuel Suite contributors",
+            "roles": [
+                "creator"
+            ]
+        }
+    ],
+    "licenses": [
+        {
+            "name": "MIT",
+            "path": "LICENSES/MIT.txt",
+            "title": "MIT License"
+        }
+    ],
+    "sources": [
+        {
+            "title": "Eskuel Suite example data",
+            "path": "https://github.com/lucques/eskuel-suite"
+        }
+    ],
+    "resources": [
+        {
+            "name": "example-school",
+            "path": "data/example-school.sql",
+            "format": "sql",
+            "mediatype": "application/sql",
+            "bytes": 224,
+            "hash": "sha256:6dd7b1aa0f9816a6d7648e851781e782ea93e82c613d05472b136fcb3fe98b6b",
+            "eskuel:database": {
+                "artifactType": "initial-sql-script",
+                "system": "postgresql",
+                "systemMinVersion": "14.0.0"
+            }
+        }
+    ]
+}
