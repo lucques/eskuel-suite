@@ -16,13 +16,13 @@ Web browser: DOMParser ------\
 Node: fast-xml-parser -------/
 ```
 
-The standalone game console accepts a `url` query parameter, for example `game-console/?url=https%3A%2F%2Fexample.com%2Fgame.xml`. The browser fetches this source through the same loader as configured game URLs, so ordinary fetch failures, CORS restrictions, mixed-content rules, size limits, and parsing errors use the existing game-loading error path.
+The standalone game console accepts a `file` query parameter, for example `game-console/?file=https%3A%2F%2Fexample.com%2Fgame.xml`. URL loading and local uploads detect game XML or a game package from the contents, regardless of filename extension or MIME type. For example, UTF-8 game XML named `gistfile1.txt` is accepted, and invalid data named `game.xml` produces an in-app error. The browser fetches this source through the same loader as configured game URLs, so ordinary fetch failures, CORS restrictions, mixed-content rules, size limits, and parsing errors use the existing game-loading error path.
 
 ## Game packages
 
 Versioned [Eskuel game packages](../spec/game-package/README.md) use the `.eskuelgame` extension. Each package contains a `game` resource at `data/<package-name>.xml` without an embedded database and one `database` resource at `dependencies/database.eskueldb`. The dependency can declare SQLite or PostgreSQL, and the XML `db-system` must match its database-package `system`. The game and database minimum versions have separate scopes, and the selected engine must satisfy both. The shared loader validates both package layers, combines the XML game with the database dependency in memory, preserves the outer and nested package metadata and bundled texts, and applies the same XML, image, and database limits as standalone sources. Authors can create, validate, and inspect packages with the [`eskuelgame` command](./eskuelgame-tool.md).
 
-The console exposes package information and displays game and database licensing separately. The editor opens a game package as an explicit import and warns that saving or exporting standalone XML does not preserve package metadata or bundled licensing files. An opened `pokemon-adventure.eskuelgame` is edited under the filename `pokemon-adventure.xml`; this prevents XML bytes from ever being written under the package extension or mistaken for a metadata-preserving package save.
+The console exposes package information and displays game and database licensing separately. The editor opens a game package as an explicit import and warns that saving or exporting standalone XML does not preserve package metadata or bundled licensing files. An opened `pokemon-adventure.eskuelgame` is edited under the filename `pokemon-adventure.xml`; the imported package is saved as standalone XML under an XML filename. For packages with other names, the editor appends `.xml` unless the name already ends in `.xml`. Standalone XML uploads keep their original filenames.
 
 ## Game console checkpoints
 

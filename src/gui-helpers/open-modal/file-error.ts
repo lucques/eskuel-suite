@@ -1,1 +1,1 @@
-export class UnsupportedFileTypeError extends Error {}
+export class FileSourceError extends Error {}

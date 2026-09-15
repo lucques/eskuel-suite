@@ -6,12 +6,16 @@ import '../../base.css'
 import { BrowserApp } from './component';
 import { standaloneDatabaseCatalog } from '../standalone-catalog';
 import { getStandaloneInitialLanguage } from '../standalone-language';
+import { getStandaloneFileUrl } from '../standalone-file';
 
 const initialLanguage = getStandaloneInitialLanguage();
+const fileUrl = getStandaloneFileUrl(window.location.search, document.baseURI);
 
 const browser = new BrowserApp('root', {
     databaseCatalog: standaloneDatabaseCatalog,
-    initialDatabaseUrls: standaloneDatabaseCatalog.map(entry => entry.localizations[initialLanguage].files[0].url),
+    initialDatabaseUrls: fileUrl === undefined
+        ? standaloneDatabaseCatalog.map(entry => entry.localizations[initialLanguage].files[0].url)
+        : [fileUrl],
     linksCenterLeft: [{
         en: { title: 'Browse Databases', url: '../' },
         de: { title: 'Datenbanken durchstöbern', url: '../' },

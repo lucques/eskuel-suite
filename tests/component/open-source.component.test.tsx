@@ -34,10 +34,6 @@ await i18n.init({
                 game_source: {
                     open_file_title: 'Open game file',
                     open_title: 'Open game',
-                    unsupported_file_type: 'Unsupported file type. Choose a .xml or .eskuelgame file.',
-                },
-                database_source: {
-                    unsupported_file_type: 'Unsupported file type. Choose a .eskueldb, .sql, or SQLite database file (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3).',
                 },
                 catalog_source: {
                     load_database: 'Load database from catalog',
@@ -84,6 +80,7 @@ afterEach(async () => {
 function renderGameSourceChooser(
     maxGameFileBytes = defaultSettings.maxGameFileBytes,
     gameCatalog: readonly GameCatalogEntry[] = [],
+    maxGamePackageBytes = maxGameFileBytes,
 ) {
     const ref = createRef<OpenGameSourceHandle>();
     const onOpenFile = vi.fn();
@@ -93,7 +90,7 @@ function renderGameSourceChooser(
                 settings: {
                     ...defaultSettings,
                     maxGameFileBytes,
-                    maxGamePackageBytes: maxGameFileBytes,
+                    maxGamePackageBytes,
                 },
                 darkMode: false,
                 updateSettings: vi.fn(),
@@ -176,7 +173,7 @@ it('reads a local Eskuel game package as binary data', async () => {
     await vi.waitFor(() => {
         expect(onOpenFile).toHaveBeenCalledWith({
             filename: 'local-game.eskuelgame',
-            type: 'eskuel-game-package',
+            type: 'auto',
             source: {
                 type: 'inline',
                 content: new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
@@ -218,7 +215,7 @@ it('shows only the current-language catalog files and opens the first file', asy
     await screen.getByRole('button', { name: 'Open', exact: true }).click();
     expect(onOpenFile).toHaveBeenCalledWith({
         filename: 'catalog-game.xml',
-        type: 'xml',
+        type: 'auto',
         source: { type: 'fetch', url: '/catalog-game.xml' },
     });
 });
@@ -279,7 +276,7 @@ it('offers every current-language filename and opens the selected file', async (
 
     expect(onOpenFile).toHaveBeenCalledWith({
         filename: 'catalog-game-compact.xml',
-        type: 'xml',
+        type: 'auto',
         source: { type: 'fetch', url: '/catalog-game-compact.xml' },
     });
 });
@@ -320,7 +317,7 @@ it('shows a database catalog entry and opens its file', async () => {
     await screen.getByRole('button', { name: 'Open', exact: true }).click();
     expect(onOpenFile).toHaveBeenCalledWith({
         filename: 'catalog-database.sql',
-        type: 'initial-sql-script',
+        type: 'auto',
         source: { type: 'fetch', url: '/catalog-database.sql' },
     });
 });
@@ -343,7 +340,7 @@ it('reads a local Eskuel database package as binary data', async () => {
     await openButton.click();
     expect(onOpenFile).toHaveBeenCalledWith({
         filename: 'database.eskueldb',
-        type: 'eskuel-database-package',
+        type: 'auto',
         source: {
             type: 'inline',
             content: new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
@@ -371,10 +368,30 @@ it('rejects an oversized local file before converting its source', async () => {
     expect(onOpenFile).not.toHaveBeenCalled();
 });
 
+it.each([
+    { filename: 'game.eskuelgame', prefix: '<game />', packaged: false },
+    { filename: 'game.xml', prefix: new Uint8Array([0x50, 0x4b, 0x03, 0x04]), packaged: true },
+])('checks the detected size limit before fully reading $filename', async ({ filename, prefix, packaged }) => {
+    const megabyte = 1024 * 1024;
+    const { onOpenFile, screen } = renderGameSourceChooser(
+        packaged ? 2 * megabyte : megabyte,
+        [],
+        packaged ? megabyte : 2 * megabyte,
+    );
+    const file = new File([prefix, new Uint8Array(megabyte)], filename);
+    const fullRead = vi.spyOn(file, 'arrayBuffer');
+
+    selectLocalFile(file);
+
+    await expect.element(screen.getByText('The file exceeds the 1 MB limit.', { exact: true })).toBeVisible();
+    expect(fullRead).not.toHaveBeenCalled();
+    expect(onOpenFile).not.toHaveBeenCalled();
+});
+
 for (const withCatalog of [false, true]) {
     const flow = withCatalog ? 'catalog dialog' : 'direct file picker';
 
-    it.each(['game', 'game.txt'])(`rejects %s and allows a valid game afterward through the ${flow}`, async filename => {
+    it.each(['game', 'game.txt'])(`opens %s for content detection through the ${flow}`, async filename => {
         const { onOpenFile, screen } = renderGameSourceChooser(
             defaultSettings.maxGameFileBytes,
             withCatalog ? makeGameCatalog() : [],
@@ -383,56 +400,47 @@ for (const withCatalog of [false, true]) {
             await screen.getByRole('button', { name: 'Open chooser' }).click();
         }
 
-        selectLocalFile(new File(['<game />'], filename, { type: 'application/xml' }));
-
-        const message = 'Unsupported file type. Choose a .xml or .eskuelgame file.';
-        await expect.element(screen.getByText(message, { exact: true })).toBeVisible();
-        expect(onOpenFile).not.toHaveBeenCalled();
-        if (withCatalog) {
-            await expect.element(screen.getByRole('button', { name: 'Open', exact: true })).toBeDisabled();
-        }
-        else {
-            await expect.element(screen.getByRole('dialog', { name: 'Error' })).toBeVisible();
-            await screen.getByText('Close', { exact: true }).click();
-        }
-
-        selectLocalFile(new File(['<game />'], 'valid-game.XML'));
+        selectLocalFile(new File(['<game />'], filename, { type: 'application/octet-stream' }));
         if (withCatalog) {
             await screen.getByRole('button', { name: 'Open', exact: true }).click();
         }
 
         await vi.waitFor(() => {
             expect(onOpenFile).toHaveBeenCalledExactlyOnceWith({
-                filename: 'valid-game.XML',
-                type: 'xml',
-                source: { type: 'inline', content: '<game />' },
+                filename,
+                type: 'auto',
+                source: { type: 'inline', content: new TextEncoder().encode('<game />') },
             });
         });
-        await expect.element(screen.getByText(message, { exact: true })).not.toBeInTheDocument();
     });
 
-    it(`explains unsupported database files through the ${flow}`, async () => {
+    it(`opens a database with an arbitrary filename through the ${flow}`, async () => {
         const { onOpenFile, screen } = renderDatabaseSourceChooser(withCatalog ? makeDatabaseCatalog() : []);
         if (withCatalog) {
             await screen.getByRole('button', { name: 'Open chooser' }).click();
         }
 
-        selectLocalFile(new File(['SELECT 1;'], 'database.txt', { type: 'text/plain' }));
+        selectLocalFile(new File(['SELECT 1;'], 'database.txt', { type: 'application/octet-stream' }));
+        if (withCatalog) {
+            await screen.getByRole('button', { name: 'Open', exact: true }).click();
+        }
 
-        await expect.element(screen.getByText(
-            'Unsupported file type. Choose a .eskueldb, .sql, or SQLite database file (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3).',
-            { exact: true },
-        )).toBeVisible();
-        expect(onOpenFile).not.toHaveBeenCalled();
+        await vi.waitFor(() => {
+            expect(onOpenFile).toHaveBeenCalledExactlyOnceWith({
+                filename: 'database.txt',
+                type: 'auto',
+                source: { type: 'inline', content: new TextEncoder().encode('SELECT 1;') },
+            });
+        });
     });
 
     it.each([
-        { filename: 'game.xml', game: true, binary: false },
-        { filename: 'game.eskuelgame', game: true, binary: true },
-        { filename: 'database.sql', game: false, binary: false },
-        { filename: 'database.sqlite', game: false, binary: true },
-        { filename: 'database.eskueldb', game: false, binary: true },
-    ])(`reports read failures for $filename and allows retrying through the ${flow}`, async ({ filename, game, binary }) => {
+        { filename: 'game.xml', game: true },
+        { filename: 'game.eskuelgame', game: true },
+        { filename: 'database.sql', game: false },
+        { filename: 'database.sqlite', game: false },
+        { filename: 'database.eskueldb', game: false },
+    ])(`reports read failures for $filename and allows retrying through the ${flow}`, async ({ filename, game }) => {
         const { onOpenFile, screen } = game
             ? renderGameSourceChooser(defaultSettings.maxGameFileBytes, withCatalog ? makeGameCatalog() : [])
             : renderDatabaseSourceChooser(withCatalog ? makeDatabaseCatalog() : []);
@@ -440,7 +448,7 @@ for (const withCatalog of [false, true]) {
             await screen.getByRole('button', { name: 'Open chooser' }).click();
         }
         const file = new File(['contents'], filename);
-        vi.spyOn(file, binary ? 'arrayBuffer' : 'text')
+        vi.spyOn(file, 'arrayBuffer')
             .mockRejectedValueOnce(new DOMException('File is no longer accessible', 'NotReadableError'));
 
         selectLocalFile(file);
@@ -476,12 +484,13 @@ for (const withCatalog of [false, true]) {
         }
         const firstFile = new File(['<game />'], 'first.xml');
         let rejectRead!: (reason: unknown) => void;
-        const pendingRead = new Promise<string>((_resolve, reject) => {
+        const pendingRead = new Promise<ArrayBuffer>((_resolve, reject) => {
             rejectRead = reject;
         });
-        vi.spyOn(firstFile, 'text').mockReturnValue(pendingRead);
+        vi.spyOn(firstFile, 'arrayBuffer').mockReturnValue(pendingRead);
 
         selectLocalFile(firstFile);
+        await vi.waitFor(() => expect(firstFile.arrayBuffer).toHaveBeenCalledOnce());
         selectLocalFile(new File(['<game />'], 'second.xml'));
         rejectRead(new DOMException('File is no longer accessible', 'NotReadableError'));
         await Promise.allSettled([pendingRead]);
@@ -501,6 +510,31 @@ function selectLocalFile(file: File): void {
     expect(input).not.toBeNull();
     Object.defineProperty(input!, 'files', { configurable: true, value: [file] });
     input!.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+for (const sourceType of ['game', 'database'] as const) {
+    it(`submits the ${sourceType} chooser without navigation only when a source is selected`, async () => {
+        const { onOpenFile, screen } = sourceType === 'game'
+            ? renderGameSourceChooser(defaultSettings.maxGameFileBytes, makeGameCatalog())
+            : renderDatabaseSourceChooser(makeDatabaseCatalog());
+
+        await screen.getByRole('button', { name: 'Open chooser' }).click();
+        const form = screen.getByRole('dialog').element().querySelector('form')!;
+        const emptySubmit = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(emptySubmit);
+
+        expect(emptySubmit.defaultPrevented).toBe(true);
+        expect(onOpenFile).not.toHaveBeenCalled();
+        await expect.element(screen.getByRole('dialog')).toBeVisible();
+
+        await screen.getByRole('radio').first().click();
+        const submit = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submit);
+
+        expect(submit.defaultPrevented).toBe(true);
+        expect(onOpenFile).toHaveBeenCalledOnce();
+        await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    });
 }
 
 function makeGameCatalog(): readonly GameCatalogEntry[] {

@@ -5,21 +5,19 @@ import { useTranslation } from 'react-i18next';
 import type { WithFilename } from '../../util';
 import { ThemedModal } from '../app-theme/AppTheme';
 import { SubtleButton } from '../subtle-button/SubtleButton';
-import { UnsupportedFileTypeError } from './file-error';
+import { FileSourceError } from './file-error';
 
 export type DirectFileSourceInputHandle = {
     open: () => void;
 };
 
 type DirectFileSourceInputProps<T> = {
-    accept: string;
-    maxFileSizeBytes: number | ((file: File) => number);
+    maxFileSizeBytes: number;
     fileToSource: (file: File) => Promise<T>;
     onOpenFile: (source: WithFilename<T>) => void;
 };
 
 function DirectFileSourceInputInner<T>({
-    accept,
     maxFileSizeBytes,
     fileToSource,
     onOpenFile,
@@ -46,9 +44,8 @@ function DirectFileSourceInputInner<T>({
         else {
             const currentFileReadId = ++fileReadId.current;
             setFileError(null);
-            const resolvedMaxFileSizeBytes = resolveMaxFileSizeBytes(maxFileSizeBytes, file);
-            if (file.size > resolvedMaxFileSizeBytes) {
-                setFileError(t('common.file_too_large', { limit: formatMegabytes(resolvedMaxFileSizeBytes) }));
+            if (file.size > maxFileSizeBytes) {
+                setFileError(t('common.file_too_large', { limit: formatMegabytes(maxFileSizeBytes) }));
             }
             else {
                 void fileToSource(file).then(source => {
@@ -57,7 +54,7 @@ function DirectFileSourceInputInner<T>({
                     }
                 }, (error: unknown) => {
                     if (fileReadId.current === currentFileReadId) {
-                        setFileError(error instanceof UnsupportedFileTypeError
+                        setFileError(error instanceof FileSourceError
                             ? error.message
                             : t('common.file_read_error'));
                     }
@@ -71,7 +68,6 @@ function DirectFileSourceInputInner<T>({
             <input
                 ref={inputRef}
                 type='file'
-                accept={accept}
                 onChange={onChange}
                 hidden
             />
@@ -98,13 +94,4 @@ export const DirectFileSourceInput = forwardRef(DirectFileSourceInputInner) as <
 
 function formatMegabytes(bytes: number): string {
     return (bytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 });
-}
-
-function resolveMaxFileSizeBytes(
-    maxFileSizeBytes: number | ((file: File) => number),
-    file: File,
-): number {
-    return typeof maxFileSizeBytes === 'number'
-        ? maxFileSizeBytes
-        : maxFileSizeBytes(file);
 }

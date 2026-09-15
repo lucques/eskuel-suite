@@ -78,13 +78,11 @@
     },
     "game_source": {
         "open_file_title": "Spieldatei öffnen",
-        "open_title": "Spiel öffnen",
-        "unsupported_file_type": "Nicht unterstützter Dateityp. Wähle eine .xml- oder .eskuelgame-Datei."
-    },
-    "database_source": {
-        "unsupported_file_type": "Nicht unterstützter Dateityp. Wähle eine .eskueldb-, .sql- oder SQLite-Datenbankdatei (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3)."
+        "open_title": "Spiel öffnen"
     },
     "initialization": {
+        "database_content_title": "Datenbankdatei ist ungültig",
+        "database_content_message": "Die Datei muss SQL-Text in UTF-8, eine SQLite-Datenbank oder ein Eskuel-Datenbankpaket enthalten.",
         "database_engine_message": "In der Datenbank-Engine ist ein interner Fehler aufgetreten.",
         "database_engine_title": "Datenbank-Engine fehlgeschlagen",
         "database_fetch_message": "Die Datenbank konnte nicht von {{url}} geöffnet werden.",

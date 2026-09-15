@@ -9,17 +9,16 @@ describe('game file sources', () => {
         expect(getGameFileSourceType('game.sql')).toBeUndefined();
     });
 
-    it('changes a package filename to XML for editor saving', () => {
-        expect(getGameEditorFilename('pokemon-adventure.eskuelgame', {
-            type: 'eskuel-game-package',
-            source: { type: 'inline', content: new Uint8Array() },
-        })).toBe('pokemon-adventure.xml');
+    it('changes an imported package filename to XML for editor saving', () => {
+        expect(getGameEditorFilename('pokemon-adventure.eskuelgame', true)).toBe('pokemon-adventure.xml');
+        expect(getGameEditorFilename('download', true)).toBe('download.xml');
+        expect(getGameEditorFilename('download.txt', true)).toBe('download.txt.xml');
+        expect(getGameEditorFilename('game.xml', true)).toBe('game.xml');
     });
 
-    it('preserves a standalone XML filename for editor saving', () => {
-        expect(getGameEditorFilename('pokemon-adventure.xml', {
-            type: 'xml',
-            source: { type: 'inline', content: '<game />' },
-        })).toBe('pokemon-adventure.xml');
+    it('preserves standalone XML filenames independently of their extensions', () => {
+        expect(getGameEditorFilename('game.xml', false)).toBe('game.xml');
+        expect(getGameEditorFilename('game.txt', false)).toBe('game.txt');
+        expect(getGameEditorFilename('game.eskuelgame', false)).toBe('game.eskuelgame');
     });
 });

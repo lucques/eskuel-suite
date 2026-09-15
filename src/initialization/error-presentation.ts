@@ -10,6 +10,7 @@ export function gameLoadErrorToPresentation(
     t: TFunction<'common'>,
 ): ErrorPresentation {
     switch (error.kind) {
+        case 'fetch-game':
         case 'fetch-xml':
         case 'fetch-game-package':
             return {
@@ -68,6 +69,12 @@ export function databaseSourceErrorToPresentation(
     t: TFunction<'common'>,
 ): ErrorPresentation {
     switch (error.kind) {
+        case 'parse-database-content':
+            return {
+                title: t('initialization.database_content_title'),
+                message: t('initialization.database_content_message'),
+                details: error.details,
+            };
         case 'fetch-db':
             return {
                 title: t('initialization.database_fetch_title'),

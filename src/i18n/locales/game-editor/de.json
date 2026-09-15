@@ -12,6 +12,7 @@
   "database_save": "Datenbank speichern",
   "database_engine_error": "Fehler in der Datenbank-Engine: {{details}}",
   "database_fetch_error": "Fehler beim Öffnen der Datenbankdatei: {{url}}",
+    "database_content_error": "Ungültiger Datenbankinhalt: {{details}}",
   "database_initialize_error": "Fehler beim Initialisieren der Datenbank: {{details}}",
   "database_metadata_error": "Ungültige SQL-Metadaten: {{details}}",
   "database_package_error": "Ungültiges Eskuel-Datenbankpaket: {{details}}",

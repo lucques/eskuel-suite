@@ -490,6 +490,7 @@ function gameEditorSessionErrorToPresentation(
     t: TFunction<'common'>,
 ): ErrorPresentation {
     switch (error.kind) {
+        case 'fetch-game':
         case 'fetch-xml':
         case 'fetch-game-package':
         case 'parse-xml':
@@ -911,6 +912,8 @@ function gameDbStatusToLoadingStatus(status: GameEditorDatabaseStatus, t: TFunct
             return { kind: 'loaded' };
         case 'failed':
             switch (status.error.kind) {
+                case 'parse-database-content':
+                    return { kind: 'failed', error: t('database_content_error', { details: status.error.details }) };
                 case 'fetch-db':
                     return { kind: 'failed', error: t('database_fetch_error', { url: status.error.url }) };
                 case 'file-size-too-large':

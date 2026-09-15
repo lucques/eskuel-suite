@@ -78,13 +78,11 @@
     },
     "game_source": {
         "open_file_title": "Open game file",
-        "open_title": "Open game",
-        "unsupported_file_type": "Unsupported file type. Choose a .xml or .eskuelgame file."
-    },
-    "database_source": {
-        "unsupported_file_type": "Unsupported file type. Choose a .eskueldb, .sql, or SQLite database file (.db, .db3, .sqlite, .sqlite3, .s3db, .sl3)."
+        "open_title": "Open game"
     },
     "initialization": {
+        "database_content_title": "Database file is invalid",
+        "database_content_message": "The file must contain UTF-8 SQL text, a SQLite database, or an Eskuel database package.",
         "database_engine_message": "The database engine encountered an internal error.",
         "database_engine_title": "Database engine failed",
         "database_fetch_message": "The database could not be opened from {{url}}.",

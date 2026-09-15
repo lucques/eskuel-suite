@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import type { GameCatalogEntry } from '../../catalog';
 import { selectGameCatalogSources } from '../../catalog/selection';
 import type { GameSource } from '../../game/loader';
-import { getGameFileSourceType } from '../../game/source';
 import { getLanguageDisplayName } from '../../i18n/languages';
 import { useSettings } from '../../settings/settings';
 import type { WithFilename } from '../../util';
+import { detectSourceContentType } from '../../source-content';
+import { FileSourceError } from './file-error';
 import { DirectFileSourceInput, type DirectFileSourceInputHandle } from './DirectFileSourceInput';
-import { UnsupportedFileTypeError } from './file-error';
 import { OpenSourceModal } from './OpenSourceModal';
 import { groupOpenSourceOptions } from './OpenSourceOptions';
 
@@ -35,9 +35,7 @@ export const OpenGameGameSourceModal = forwardRef(function OpenGameGameSourceMod
         language,
     );
     const providedSources = groupOpenSourceOptions(catalogSources);
-    const getMaxFileSizeBytes = (file: File): number => getGameFileSourceType(file.name) === 'xml'
-        ? settings.maxGameFileBytes
-        : settings.maxGamePackageBytes;
+    const maxFileSizeBytes = Math.max(settings.maxGameFileBytes, settings.maxGamePackageBytes);
 
     useImperativeHandle(ref, () => ({
         open: () => {
@@ -51,20 +49,20 @@ export const OpenGameGameSourceModal = forwardRef(function OpenGameGameSourceMod
     }), [hasProvidedSources]);
 
     const fileToSource = async (file: File): Promise<GameSource> => {
-        const sourceType = getGameFileSourceType(file.name);
-        if (sourceType === 'xml') {
-            return { type: 'xml', source: { type: 'inline', content: await file.text() } };
+        const prefix = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+        const maxBytes = detectSourceContentType(prefix) === 'zip'
+            ? settings.maxGamePackageBytes
+            : settings.maxGameFileBytes;
+        if (file.size > maxBytes) {
+            const limit = (maxBytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 });
+            throw new FileSourceError(t('common.file_too_large', { limit }));
         }
-        else if (sourceType === 'eskuel-game-package') {
+        else {
             return {
-                type: 'eskuel-game-package',
+                type: 'auto',
                 source: { type: 'inline', content: new Uint8Array(await file.arrayBuffer()) },
             };
         }
-        else if (sourceType === undefined) {
-            throw new UnsupportedFileTypeError(t('game_source.unsupported_file_type'));
-        }
-        else { const _n: never = sourceType; return _n; }
     };
 
     return (
@@ -72,8 +70,7 @@ export const OpenGameGameSourceModal = forwardRef(function OpenGameGameSourceMod
             {!hasProvidedSources
                 ? <DirectFileSourceInput
                     ref={directFileInputRef}
-                    accept='.eskuelgame, .xml'
-                    maxFileSizeBytes={getMaxFileSizeBytes}
+                    maxFileSizeBytes={maxFileSizeBytes}
                     fileToSource={fileToSource}
                     onOpenFile={onOpenFile}
                 />
@@ -92,9 +89,8 @@ export const OpenGameGameSourceModal = forwardRef(function OpenGameGameSourceMod
                             <i className='bi bi-file-zip' />
                         </>
                     }
-                    fileAccept='.eskuelgame, .xml'
                     providedSources={providedSources}
-                    maxFileSizeBytes={getMaxFileSizeBytes}
+                    maxFileSizeBytes={maxFileSizeBytes}
                     fileToSource={fileToSource}
                     onHide={() => setShow(false)}
                     onOpenFile={onOpenFile}

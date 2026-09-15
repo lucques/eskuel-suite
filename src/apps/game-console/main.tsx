@@ -6,18 +6,16 @@ import '../../base.css'
 import { GameConsoleApp } from './component';
 import { standaloneGameCatalog, standaloneGameFiles } from '../standalone-catalog';
 import { getStandaloneInitialLanguage } from '../standalone-language';
+import { getStandaloneFileUrl } from '../standalone-file';
 
 const initialLanguage = getStandaloneInitialLanguage();
-const xmlUrlParameter = new URLSearchParams(window.location.search).get('xml');
-const initialGameOptions = xmlUrlParameter === null
-    ? { initialGameUrl: standaloneGameFiles[initialLanguage].url }
-    : { initialGameUrl: new URL(xmlUrlParameter, document.baseURI).href };
+const fileUrl = getStandaloneFileUrl(window.location.search, document.baseURI);
 
 const gameConsole = new GameConsoleApp(
     'root',
     {
         gameCatalog: standaloneGameCatalog,
-        ...initialGameOptions,
+        initialGameUrl: fileUrl ?? standaloneGameFiles[initialLanguage].url,
         linksCenterLeft: [{
             en: { title: 'Browse Games', url: '../' },
             de: { title: 'Spiele durchstöbern', url: '../' },

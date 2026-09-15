@@ -300,6 +300,7 @@ function gameSessionErrorToPresentation(
     t: TFunction<'common'>,
 ): ErrorPresentation {
     switch (error.kind) {
+        case 'fetch-game':
         case 'fetch-xml':
         case 'fetch-game-package':
         case 'parse-xml':

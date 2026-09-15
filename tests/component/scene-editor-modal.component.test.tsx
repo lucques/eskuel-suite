@@ -33,7 +33,7 @@ vi.mock('../../src/apps/game-editor/scenes/SceneEditorForms', () => ({
         ),
 }));
 
-import { AddSceneModal } from '../../src/apps/game-editor/scenes/SceneEditorModals';
+import { AddSceneModal, EditSceneModal } from '../../src/apps/game-editor/scenes/SceneEditorModals';
 
 const i18n = createInstance();
 await i18n.init({
@@ -45,6 +45,7 @@ await i18n.init({
                 common: {
                     add: 'Add',
                     close: 'Close',
+                    save: 'Save',
                 },
             },
             'game-editor': {
@@ -61,6 +62,41 @@ await i18n.init({
     defaultNS: 'common',
     showSupportNotice: false,
 });
+
+for (const action of ['Add', 'Save'] as const) {
+    it(`handles ${action} submissions without navigation and rejects an unloaded image`, async () => {
+        const onSaveAndHide = vi.fn();
+        const screen = render(
+            <I18nextProvider i18n={i18n}>
+                {action === 'Add'
+                    ? <AddSceneModal show onHide={() => {}} onSaveAndHide={onSaveAndHide} />
+                    : <EditSceneModal
+                        initialScene={{ type: 'text', text: 'Original scene', key: 'original' }}
+                        onHide={() => {}}
+                        onSaveAndHide={onSaveAndHide}
+                    />}
+            </I18nextProvider>,
+        );
+        const saveButton = screen.getByRole('button', { name: action, exact: true });
+        await expect.element(saveButton).toBeEnabled();
+
+        const form = screen.getByRole('dialog').element().querySelector('form')!;
+        const submit = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(submit);
+
+        expect(submit.defaultPrevented).toBe(true);
+        expect(onSaveAndHide).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ type: 'text' }));
+        onSaveAndHide.mockClear();
+
+        await screen.getByRole('radio', { name: 'Image' }).click();
+        await expect.element(saveButton).toBeDisabled();
+        const invalidSubmit = new Event('submit', { bubbles: true, cancelable: true });
+        form.dispatchEvent(invalidSubmit);
+
+        expect(invalidSubmit.defaultPrevented).toBe(true);
+        expect(onSaveAndHide).not.toHaveBeenCalled();
+    });
+}
 
 it('requires a successfully loaded image before adding an image scene', async () => {
     const onSaveAndHide = vi.fn();

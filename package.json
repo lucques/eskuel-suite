@@ -1,7 +1,7 @@
 {
   "name": "eskuel-suite",
   "description": "A library for building web-based educational material for SQL",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "contributors": [
     {
       "name": "Lukas Convent",

@@ -1,7 +1,4 @@
-import { getDatabaseFileSourceType } from '../database/source';
-import { getGameFileSourceType } from '../game/source';
 import type {
-    CatalogFile,
     DatabaseCatalogEntry,
     GameCatalogEntry,
 } from './model';
@@ -9,21 +6,20 @@ import type {
 type UnknownRecord = Record<string, unknown>;
 
 export function assertGameCatalog(candidate: unknown): asserts candidate is readonly GameCatalogEntry[] {
-    validateCatalog(candidate, 'Game catalog', validateGameCatalogFile);
+    validateCatalog(candidate, 'Game catalog');
 }
 
 export function assertDatabaseCatalog(candidate: unknown): asserts candidate is readonly DatabaseCatalogEntry[] {
-    validateCatalog(candidate, 'Database catalog', validateDatabaseCatalogFile);
+    validateCatalog(candidate, 'Database catalog');
 }
 
 function validateCatalog(
     candidate: unknown,
     context: string,
-    validateFile: (candidate: unknown, context: string) => void,
 ): void {
     const entries = requireArray(candidate, context);
     validateUniqueEntryIds(entries, context);
-    entries.forEach((entry, index) => validateCatalogEntry(entry, `${context} entry ${index + 1}`, validateFile));
+    entries.forEach((entry, index) => validateCatalogEntry(entry, `${context} entry ${index + 1}`));
 }
 
 function validateUniqueEntryIds(entries: readonly unknown[], context: string): void {
@@ -43,7 +39,6 @@ function validateUniqueEntryIds(entries: readonly unknown[], context: string): v
 function validateCatalogEntry(
     candidate: unknown,
     context: string,
-    validateFile: (candidate: unknown, context: string) => void,
 ): void {
     const entry = requireRecord(candidate, context);
     requireNonEmptyString(entry.id, `${context}.id`);
@@ -51,14 +46,13 @@ function validateCatalogEntry(
     requireNonEmptyRecord(localizations, `${context}.localizations`);
     for (const [language, localizationCandidate] of Object.entries(localizations)) {
         requireNonEmptyString(language, `${context}.localizations language`);
-        validateLocalization(localizationCandidate, `${context}.localizations.${language}`, validateFile);
+        validateLocalization(localizationCandidate, `${context}.localizations.${language}`);
     }
 }
 
 function validateLocalization(
     candidate: unknown,
     context: string,
-    validateFile: (candidate: unknown, context: string) => void,
 ): void {
     const localization = requireRecord(candidate, context);
     requireNonEmptyString(localization.title, `${context}.title`);
@@ -67,8 +61,8 @@ function validateLocalization(
     const filenames = new Set<string>();
     for (const [index, fileCandidate] of files.entries()) {
         const fileContext = `${context}.files[${index}]`;
-        validateFile(fileCandidate, fileContext);
         const file = requireRecord(fileCandidate, fileContext);
+        requireNonEmptyString(file.url, `${fileContext}.url`);
         const filename = requireNonEmptyString(file.filename, `${fileContext}.filename`);
         if (filenames.has(filename)) {
             invalid(`${context}.files contains duplicate filename '${filename}'`);
@@ -77,27 +71,6 @@ function validateLocalization(
             filenames.add(filename);
         }
     }
-}
-
-function validateGameCatalogFile(candidate: unknown, context: string): asserts candidate is CatalogFile {
-    const file = validateCatalogFile(candidate, context);
-    if (getGameFileSourceType(file.filename) === undefined) {
-        invalid(`${context}.filename has an unsupported game extension`);
-    }
-}
-
-function validateDatabaseCatalogFile(candidate: unknown, context: string): asserts candidate is CatalogFile {
-    const file = validateCatalogFile(candidate, context);
-    if (getDatabaseFileSourceType(file.filename) === undefined) {
-        invalid(`${context}.filename has an unsupported database extension`);
-    }
-}
-
-function validateCatalogFile(candidate: unknown, context: string): UnknownRecord & CatalogFile {
-    const file = requireRecord(candidate, context);
-    requireNonEmptyString(file.url, `${context}.url`);
-    requireNonEmptyString(file.filename, `${context}.filename`);
-    return file as UnknownRecord & CatalogFile;
 }
 
 function validateOptionalNonEmptyString(record: UnknownRecord, property: string, context: string): void {

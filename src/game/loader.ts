@@ -7,6 +7,7 @@ import { Game as GameModel } from './model';
 import { readGamePackage } from './package';
 import type { GamePackageInfo, ParseGamePackageFail } from './package';
 import type { GameSource } from './source';
+import { decodeSourceText, detectSourceContentType } from '../source-content';
 import type { DbData } from '../database/api';
 import type { DatabaseSystem } from '../database/system';
 import { defaultSettingsStore } from '../settings/store';
@@ -18,8 +19,10 @@ import type { ParseXMLFail, XmlElement, XmlParser } from './xml/model';
 export type { GameSource } from './source';
 
 export type FetchXMLFail = { kind: 'fetch-xml', url: string };
+export type FetchGameFail = { kind: 'fetch-game', url: string };
 export type FetchGamePackageFail = { kind: 'fetch-game-package', url: string };
 export type LoadGameFail =
+    | FetchGameFail
     | FetchXMLFail
     | FetchGamePackageFail
     | FileSizeTooLargeFail
@@ -37,7 +40,55 @@ export function loadGame(source: GameSource, xmlParser: XmlParser): Effect.Effec
 }
 
 export function loadGameWithInfo(source: GameSource, xmlParser: XmlParser): Effect.Effect<LoadedGame, LoadGameFail> {
-    if (source.type === 'object') {
+    if (source.type === 'auto') {
+        return Effect.gen(function* () {
+            const settings = defaultSettingsStore.getSnapshot();
+            const maxFileBytes = Math.max(settings.maxGameFileBytes, settings.maxGamePackageBytes);
+            const maxBytes = source.source.type === 'fetch'
+                ? Math.min(maxFileBytes, settings.maxFetchedSourceBytes)
+                : maxFileBytes;
+            const result = yield* Effect.tryPromise({
+                try: signal => materializeBinarySource(source.source, maxBytes, signal),
+                catch: () => ({ kind: 'fetch-game' as const, url: source.source.type === 'fetch' ? source.source.url : '' }),
+            });
+            if (!result.ok) {
+                return yield* Effect.fail(result.error.kind === 'file-size-too-large'
+                    ? result.error
+                    : { kind: 'fetch-game' as const, url: result.error.url });
+            }
+            else {
+                const contentType = detectSourceContentType(result.data);
+                switch (contentType) {
+                    case 'zip':
+                        return yield* loadGameWithInfo({
+                            type: 'eskuel-game-package',
+                            source: { type: 'inline', content: result.data },
+                        }, xmlParser);
+                    case 'sqlite':
+                        return yield* Effect.fail({ kind: 'parse-xml' as const, details: 'Expected game XML or an Eskuel game package, but received a SQLite database.' });
+                    case 'text': {
+                        if (result.data.byteLength > settings.maxGameFileBytes) {
+                            return yield* Effect.fail({ kind: 'file-size-too-large' as const });
+                        }
+                        else {
+                            const text = decodeSourceText(result.data);
+                            if (!text.ok) {
+                                return yield* Effect.fail({ kind: 'parse-xml' as const, details: text.error });
+                            }
+                            else {
+                                return yield* loadGameWithInfo({
+                                    type: 'xml',
+                                    source: { type: 'inline', content: text.data },
+                                }, xmlParser);
+                            }
+                        }
+                    }
+                    default: { const _n: never = contentType; return _n; }
+                }
+            }
+        });
+    }
+    else if (source.type === 'object') {
         return Effect.succeed({ game: source.source });
     }
     else if (source.type === 'xml') {

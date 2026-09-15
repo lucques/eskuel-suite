@@ -222,7 +222,7 @@ export class GameEditorSession {
         this.uri = makeGameEditorURI(`inmemory:///${uuidv4()}.xml`);
         this.sqlEditorURI = makeCodeEditorURI();
         this.documentId = sessionOptions.id ?? makeGameDocumentID(uuidv4());
-        this.initialFilename = getGameEditorFilename(filename, source);
+        this.initialFilename = filename;
         this.initialDocumentRevision = sessionOptions.revision ?? 0;
         this.documentSourceKey = sessionOptions.sourceKey ?? getGameSourceKey(source);
         this.initialSavedGameFingerprint = sessionOptions.savedGameFingerprint;
@@ -573,7 +573,7 @@ export class GameEditorSession {
                 ...(packageInfo === undefined ? {} : { packageInfo }),
                 document: {
                     id: this.documentId,
-                    filename: this.initialFilename,
+                    filename: getGameEditorFilename(this.initialFilename, loaded.packageInfo !== undefined),
                     revision: this.initialDocumentRevision,
                     sourceKey: this.documentSourceKey,
                     savedGameFingerprint,
@@ -1486,7 +1486,7 @@ function getGameSourceKey(source: GameSource): string | null {
     if (source.type === 'object') {
         return null;
     }
-    else if (source.type === 'xml' || source.type === 'eskuel-game-package') {
+    else if (source.type === 'auto' || source.type === 'xml' || source.type === 'eskuel-game-package') {
         return source.source.type === 'fetch'
             ? `url:${source.source.url}`
             : null;

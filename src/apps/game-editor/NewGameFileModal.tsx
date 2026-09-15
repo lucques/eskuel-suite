@@ -15,6 +15,7 @@ export function NewGameFileModal({ show, onHide, onCreate }: {
     const { t } = useTranslation('game-editor');
     const { t: tc } = useTranslation('common');
     const titleId = useId();
+    const formId = useId();
     const [gameTitle, setGameTitle] = useState<string | null>(null);
     const displayedGameTitle = gameTitle ?? t('new_game_default_name');
 
@@ -30,7 +31,16 @@ export function NewGameFileModal({ show, onHide, onCreate }: {
                 <Modal.Title id={titleId} className={styles.title}>{t('new_game')}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form className={styles.form}>
+                <Form
+                    id={formId}
+                    className={styles.form}
+                    onSubmit={event => {
+                        event.preventDefault();
+                        if (displayedGameTitle !== '') {
+                            onCreateClicked();
+                        }
+                    }}
+                >
                     <div>
                         <label htmlFor='new-game-name' className='mb-2'><strong>{t('new_game_name_label')}</strong></label>
                         <Form.Control
@@ -38,6 +48,7 @@ export function NewGameFileModal({ show, onHide, onCreate }: {
                             type='text'
                             value={displayedGameTitle}
                             onChange={event => setGameTitle(event.target.value)}
+                            required
                         />
                     </div>
                 </Form>
@@ -46,7 +57,7 @@ export function NewGameFileModal({ show, onHide, onCreate }: {
                 <SubtleButton variant='secondary' onClick={onHide}>
                     {tc('common.close')}
                 </SubtleButton>
-                <SubtleButton variant='primary' onClick={onCreateClicked} disabled={displayedGameTitle === ''}>
+                <SubtleButton type='submit' form={formId} variant='primary' disabled={displayedGameTitle === ''}>
                     {tc('common.create')}
                 </SubtleButton>
             </Modal.Footer>

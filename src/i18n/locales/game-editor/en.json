@@ -12,6 +12,7 @@
   "database_save": "Save database",
   "database_engine_error": "Database engine error: {{details}}",
   "database_fetch_error": "Failed to open database file: {{url}}",
+    "database_content_error": "Invalid database content: {{details}}",
   "database_initialize_error": "Failed to initialize database: {{details}}",
   "database_metadata_error": "Invalid SQL metadata: {{details}}",
   "database_package_error": "Invalid Eskuel database package: {{details}}",

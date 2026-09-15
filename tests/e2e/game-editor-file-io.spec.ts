@@ -47,7 +47,7 @@ async function downloadedFilePath(download: Download): Promise<string> {
     }
 }
 
-for (const filename of ['opened-game.xml', 'opened-game.XML']) {
+for (const filename of ['opened-game.xml', 'opened-game.XML', 'opened-game', 'opened-game.txt']) {
     test(`preserves the opened game filename ${filename} when exporting`, async ({ page }) => {
         await page.addInitScript(() => {
             Object.defineProperty(window, 'showSaveFilePicker', { value: undefined, configurable: true });
@@ -65,30 +65,6 @@ for (const filename of ['opened-game.xml', 'opened-game.XML']) {
     });
 }
 
-for (const filename of ['opened-game', 'opened-game.txt']) {
-    test(`rejects the unsupported filename ${filename} and then opens a valid game`, async ({ page }) => {
-        const pageErrors: Error[] = [];
-        page.on('pageerror', error => pageErrors.push(error));
-        const source = await readFile(gamePath);
-        await page.goto('/game-editor/');
-        await page.getByRole('button', { name: 'Open game' }).click();
-        const dialog = page.getByRole('dialog', { name: 'Open game', exact: true });
-        const fileInput = dialog.locator('input[type="file"]');
-        await fileInput.setInputFiles({ name: filename, mimeType: 'application/xml', buffer: source });
-
-        await expect(dialog.getByRole('alert')).toHaveText('Unsupported file type. Choose a .xml or .eskuelgame file.');
-        await expect(dialog.getByRole('button', { name: 'Open', exact: true })).toBeDisabled();
-
-        await fileInput.setInputFiles({ name: 'valid-game.xml', mimeType: 'application/xml', buffer: source });
-        await expect(dialog.getByRole('alert')).toHaveCount(0);
-        await dialog.getByRole('button', { name: 'Open', exact: true }).click();
-
-        await expect(page.getByTestId('game-editor-session-tab').filter({ hasText: 'valid-game.xml' })).toBeVisible();
-        await expect(page.getByLabel('Name:').filter({ visible: true })).toHaveValue('Minimal Playthrough E2E');
-        expect(pageErrors).toEqual([]);
-    });
-}
-
 test('downloads an opened SQL initialization script as database.sql', async ({ page }) => {
     const sql = [
         '-- eskuel:system=sqlite',
@@ -99,7 +75,7 @@ test('downloads an opened SQL initialization script as database.sql', async ({ p
     await page.goto('/game-editor/');
     const databasePanel = page.getByTestId('game-editor-database-panel');
     await openDatabaseFile(page, databasePanel, {
-        name: 'initialization.sql',
+        name: 'initialization.txt',
         mimeType: 'text/plain',
         buffer: Buffer.from(sql),
     });
@@ -116,7 +92,11 @@ test('downloads an opened SQL initialization script as database.sql', async ({ p
 test('opens a binary SQLite database and downloads it as database.db', async ({ page }) => {
     await page.goto('/game-editor/');
     const databasePanel = page.getByTestId('game-editor-database-panel');
-    await openDatabaseFile(page, databasePanel, sqliteDatabasePath);
+    await openDatabaseFile(page, databasePanel, {
+        name: 'sqlite-without-extension',
+        mimeType: 'text/plain',
+        buffer: await readFile(sqliteDatabasePath),
+    });
     await expect(page.getByTestId('game-editor-schema-panel').getByText('students', { exact: true })).toBeVisible();
 
     const downloadPromise = page.waitForEvent('download');

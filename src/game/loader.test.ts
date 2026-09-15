@@ -225,16 +225,16 @@ describe('game loading', () => {
         expect(error).toEqual({ kind: 'file-size-too-large' });
     });
 
-    it('maps a failed XML fetch to a typed fetch failure', async () => {
+    it.each(['xml', 'auto'] as const)('maps a failed %s XML fetch to a typed fetch failure', async type => {
         const url = '/missing-game.xml';
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
 
         const error = await Effect.runPromise(Effect.flip(loadGame({
-            type: 'xml',
+            type,
             source: { type: 'fetch', url },
         }, parserThatMustNotBeCalled)));
 
-        expect(error).toEqual({ kind: 'fetch-xml', url });
+        expect(error).toEqual({ kind: type === 'auto' ? 'fetch-game' : 'fetch-xml', url });
     });
 
     it('loads an Eskuel game package and supplies its database dependency', async () => {
@@ -422,16 +422,16 @@ describe('game loading', () => {
         });
     });
 
-    it('maps a failed game-package fetch to a typed fetch failure', async () => {
+    it.each(['eskuel-game-package', 'auto'] as const)('maps a failed %s game-package fetch to a typed fetch failure', async type => {
         const url = '/missing-game.eskuelgame';
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
 
         const error = await Effect.runPromise(Effect.flip(loadGame({
-            type: 'eskuel-game-package',
+            type,
             source: { type: 'fetch', url },
         }, parserThatMustNotBeCalled)));
 
-        expect(error).toEqual({ kind: 'fetch-game-package', url });
+        expect(error).toEqual({ kind: type === 'auto' ? 'fetch-game' : 'fetch-game-package', url });
     });
 });
 

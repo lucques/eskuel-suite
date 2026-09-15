@@ -3,12 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import type { DatabaseCatalogEntry } from '../../catalog';
 import { selectDatabaseCatalogSources } from '../../catalog/selection';
-import { getDatabaseFileSourceType, type DbSource } from '../../database/source';
+import type { DbSource } from '../../database/source';
 import { getLanguageDisplayName } from '../../i18n/languages';
 import { useSettings } from '../../settings/settings';
 import type { WithFilename } from '../../util';
 import { DirectFileSourceInput, type DirectFileSourceInputHandle } from './DirectFileSourceInput';
-import { UnsupportedFileTypeError } from './file-error';
 import { OpenSourceModal } from './OpenSourceModal';
 import { groupOpenSourceOptions } from './OpenSourceOptions';
 
@@ -46,35 +45,16 @@ export const OpenDbSourceModal = forwardRef(function OpenDbSourceModal({
         },
     }), [hasProvidedSources]);
 
-    const fileToSource = async (file: File): Promise<DbSource> => {
-        const sourceType = getDatabaseFileSourceType(file.name);
-        if (sourceType === 'initial-sql-script') {
-            return { type: 'initial-sql-script', source: { type: 'inline', content: await file.text() } };
-        }
-        else if (sourceType === 'sqlite-db') {
-            return {
-                type: 'sqlite-db',
-                source: { type: 'inline', content: new Uint8Array(await file.arrayBuffer()) },
-            };
-        }
-        else if (sourceType === 'eskuel-database-package') {
-            return {
-                type: 'eskuel-database-package',
-                source: { type: 'inline', content: new Uint8Array(await file.arrayBuffer()) },
-            };
-        }
-        else if (sourceType === undefined) {
-            throw new UnsupportedFileTypeError(t('database_source.unsupported_file_type'));
-        }
-        else { const _n: never = sourceType; return _n; }
-    };
+    const fileToSource = async (file: File): Promise<DbSource> => ({
+        type: 'auto',
+        source: { type: 'inline', content: new Uint8Array(await file.arrayBuffer()) },
+    });
 
     return (
         <>
             {!hasProvidedSources
                 ? <DirectFileSourceInput
                     ref={directFileInputRef}
-                    accept='.eskueldb, .sql, .db, .db3, .sqlite, .sqlite3, .s3db, .sl3'
                     maxFileSizeBytes={settings.maxDatabaseFileBytes}
                     fileToSource={fileToSource}
                     onOpenFile={onOpenFile}
@@ -94,7 +74,6 @@ export const OpenDbSourceModal = forwardRef(function OpenDbSourceModal({
                             <i className='bi bi-database' />
                         </>
                     }
-                    fileAccept='.eskueldb, .sql, .db, .db3, .sqlite, .sqlite3, .s3db, .sl3'
                     providedSources={providedSources}
                     maxFileSizeBytes={settings.maxDatabaseFileBytes}
                     fileToSource={fileToSource}

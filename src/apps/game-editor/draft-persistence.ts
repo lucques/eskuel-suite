@@ -65,7 +65,9 @@ export class GameDocumentDraftPersistence {
     }
 
     async persistInitialDocument(): Promise<void> {
-        await Effect.runPromise(this.session.resolve());
+        // Loading failures are already published by the session. There is no
+        // document to save in that case, and no draft-storage failure to report.
+        await Effect.runPromise(this.session.resolve().pipe(Effect.catchAll(() => Effect.void)));
         const sessionSnapshot = this.session.getSnapshot();
         if (sessionSnapshot.kind === 'ready' && !this.disposed) {
             this.packageInfo = sessionSnapshot.packageInfo;

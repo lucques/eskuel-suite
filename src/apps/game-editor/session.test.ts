@@ -400,6 +400,39 @@ describe('GameEditorSession', () => {
         expect(session.hasUnsavedFileChanges()).toBe(true);
     }));
 
+    it.effect('does not report a draft-storage failure when the game URL cannot be loaded', () => Effect.gen(function* () {
+        const databaseEngineFactory = vi.fn(() => {
+            throw new Error('A failed game load must not start the database engine');
+        });
+        const url = '/games/gistfile1.txt';
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+        const session = new GameEditorSession(
+            'gistfile1.txt',
+            { type: 'auto', source: { type: 'fetch', url } },
+            createTestGamePlatformAdapters(databaseEngineFactory),
+        );
+        const store: GameDocumentDraftStore = {
+            loadAll: vi.fn(async () => []),
+            replace: vi.fn(async () => undefined),
+            update: vi.fn(async () => undefined),
+            deleteDocument: vi.fn(async () => undefined),
+        };
+        const persistence = new GameDocumentDraftPersistence(session, store);
+
+        yield* Effect.promise(() => persistence.persistInitialDocument());
+
+        expect(session.getSnapshot()).toEqual({
+            kind: 'failed',
+            error: { kind: 'fetch-game', url },
+        });
+        expect(persistence.getSnapshot().kind).toBe('idle');
+        expect(store.replace).not.toHaveBeenCalled();
+        expect(store.update).not.toHaveBeenCalled();
+        expect(databaseEngineFactory).not.toHaveBeenCalled();
+        persistence.dispose();
+        session.dispose();
+    }));
+
     it.effect('persists metadata, order, and individual scenes without rewriting large records', () => Effect.gen(function* () {
         const connection: DatabaseConnection = {
             exec() {

@@ -1,6 +1,5 @@
-import { getDatabaseFileSourceType, type DbSource } from '../database/source';
+import type { DbSource } from '../database/source';
 import type { GameSource } from '../game/loader';
-import { getGameFileSourceType } from '../game/source';
 import type { WithFilename } from '../util';
 import type {
     CatalogFile,
@@ -65,52 +64,17 @@ function makeCatalogSourceOption<T>(
 }
 
 function gameCatalogFileSource(file: CatalogFile): WithFilename<GameSource> {
-    const sourceType = getGameFileSourceType(file.filename);
-    if (sourceType === 'xml') {
-        return {
-            filename: file.filename,
-            type: 'xml',
-            source: { type: 'fetch', url: file.url },
-        };
-    }
-    else if (sourceType === 'eskuel-game-package') {
-        return {
-            filename: file.filename,
-            type: 'eskuel-game-package',
-            source: { type: 'fetch', url: file.url },
-        };
-    }
-    else if (sourceType === undefined) {
-        throw new TypeError(`Unsupported game catalog filename extension: ${file.filename}`);
-    }
-    else { const _n: never = sourceType; return _n; }
+    return {
+        filename: file.filename,
+        type: 'auto',
+        source: { type: 'fetch', url: file.url },
+    };
 }
 
 function databaseCatalogFileSource(file: CatalogFile): WithFilename<DbSource> {
-    const sourceType = getDatabaseFileSourceType(file.filename);
-    if (sourceType === 'initial-sql-script') {
-        return {
-            filename: file.filename,
-            type: 'initial-sql-script',
-            source: { type: 'fetch', url: file.url },
-        };
-    }
-    else if (sourceType === 'sqlite-db') {
-        return {
-            filename: file.filename,
-            type: 'sqlite-db',
-            source: { type: 'fetch', url: file.url },
-        };
-    }
-    else if (sourceType === 'eskuel-database-package') {
-        return {
-            filename: file.filename,
-            type: 'eskuel-database-package',
-            source: { type: 'fetch', url: file.url },
-        };
-    }
-    else if (sourceType === undefined) {
-        throw new TypeError(`Unsupported database catalog filename extension: ${file.filename}`);
-    }
-    else { const _n: never = sourceType; return _n; }
+    return {
+        filename: file.filename,
+        type: 'auto',
+        source: { type: 'fetch', url: file.url },
+    };
 }

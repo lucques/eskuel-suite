@@ -205,6 +205,7 @@ function browserSessionErrorToPresentation(
     t: TFunction<'common'>,
 ): ErrorPresentation {
     switch (error.kind) {
+        case 'parse-database-content':
         case 'fetch-db':
         case 'file-size-too-large':
         case 'run-init-script':

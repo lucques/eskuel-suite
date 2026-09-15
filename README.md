@@ -129,21 +129,21 @@ The public `supportedLanguages` tuple is the source of truth for the finite lang
 
 `BrowserApp`, `GameConsoleApp`, and `GameEditorApp` accept their options as the second constructor argument. The game editor also accepts `persistGameDrafts: true` to store normalized local drafts in IndexedDB and restore them the next time the editor is opened on the same origin. Draft revisions, cross-tab document ownership, and saved-file fingerprints are described in [Game editor drafts and file state](doc/game-editor.md#drafts-and-file-state). Game-console progress persistence is enabled by default and can be disabled with `persistGameProgress: false`.
 
-The embedding page can pass resource URLs directly with `initialGameUrl`, `initialGameUrls`, and `initialDatabaseUrls`. The app performs the fetch so that loading status, size limits, cancellation, and failures follow the same path as catalog resources. Query-string conventions remain the embedding page's responsibility. For example, a page using `?xml=...` can initialize the game console as follows:
+The embedding page can pass resource URLs directly with `initialGameUrl`, `initialGameUrls`, and `initialDatabaseUrls`. The app performs the fetch so that loading status, size limits, cancellation, and failures follow the same path as catalog resources. Downloaded content determines the format; URL suffixes and HTTP content types are not required to match. Loading and validation failures appear in the affected view without throwing from the app constructor or preventing other sources from loading. Query-string conventions remain the embedding page's responsibility. For example, a page using `?file=...` can initialize the game console as follows:
 
 ```ts
-const xmlUrl = new URLSearchParams(window.location.search).get('xml');
+const fileUrl = new URLSearchParams(window.location.search).get('file');
 const gameConsole = new GameConsoleApp('game-console', {
-    initialGameUrl: xmlUrl === null
+    initialGameUrl: fileUrl === null
         ? undefined
-        : new URL(xmlUrl, document.baseURI).href,
+        : new URL(fileUrl, document.baseURI).href,
 });
 gameConsole.init();
 ```
 
-The standalone apps select their initial game and databases once at startup, using the saved interface-language preference or the detected interface language, with English as fallback. The game console's `?xml=...` parameter overrides its default game. Changing the interface language later updates the catalog choices while keeping the currently loaded content.
+All three standalone apps accept `?file=...` to open a game or database URL in place of their default startup content. Relative file URLs are resolved against the page URL. Without `file`, the apps select their initial game and databases once at startup, using the saved interface-language preference or the detected interface language, with English as fallback. Changing the interface language later updates the catalog choices while keeping the currently loaded content.
 
-Game URLs ending in `.eskuelgame` are loaded as versioned [Eskuel game packages](./spec/game-package/README.md), while URLs ending in `.xml` are loaded as standalone game XML. Database URLs ending in `.eskueldb` are loaded as versioned [Eskuel database packages](./spec/database-package/README.md). URLs ending in `.sql` are loaded as initialization scripts. URLs ending in `.db`, `.db3`, `.sqlite`, `.sqlite3`, `.s3db`, or `.sl3` are loaded as SQLite database files. Cross-origin resource URLs require the resource server to permit the embedding page's origin through CORS.
+URLs, catalog files, and local file uploads use the same content detection. Games accept UTF-8 game XML or versioned [Eskuel game packages](./spec/game-package/README.md); databases accept UTF-8 SQL initialization scripts, SQLite database files, or versioned [Eskuel database packages](./spec/database-package/README.md). ZIP and SQLite signatures identify binary formats; the appropriate game, package, or database parser validates the contents. File extensions and MIME types do not determine acceptance: a valid game named `gistfile1.txt` works, while invalid content named `game.xml` produces an in-app error. File pickers allow any filename. Original filenames remain display labels; the editor imports game packages under an XML filename because it saves standalone XML. Existing file, download, and package resource limits still apply. Cross-origin resource URLs require the resource server to permit the embedding page's origin through CORS.
 
 ### Interface language
 
@@ -195,7 +195,7 @@ const gameConsole = new GameConsoleApp('game-console', {
 gameConsole.init();
 ```
 
-`GameEditorApp` and `GameConsoleApp` accept `gameCatalog` through their options, while `BrowserApp` accepts `databaseCatalog`. Catalogs are used only by the Open dialog; startup resources use `initialGameUrl`, `initialGameUrls`, or `initialDatabaseUrls`. The public module exports `GameCatalogEntry`, `DatabaseCatalogEntry`, `CatalogFile`, and `CatalogLocalization`, as well as `assertGameCatalog` and `assertDatabaseCatalog` for validating untyped runtime data. Each localization contains a title, an optional `pageUrl`, and a possibly empty `files` list. Game filenames use `.xml` for standalone XML or `.eskuelgame` for game packages; database filenames use `.eskueldb` for Eskuel database packages, `.sql` for initialization scripts, or a supported SQLite database extension for database files.
+`GameEditorApp` and `GameConsoleApp` accept `gameCatalog` through their options, while `BrowserApp` accepts `databaseCatalog`. Catalogs are used only by the Open dialog; startup resources use `initialGameUrl`, `initialGameUrls`, or `initialDatabaseUrls`. The public module exports `GameCatalogEntry`, `DatabaseCatalogEntry`, `CatalogFile`, and `CatalogLocalization`, as well as `assertGameCatalog` and `assertDatabaseCatalog` for validating untyped runtime data. Each localization contains a title, an optional `pageUrl`, and a possibly empty `files` list. Each file has a non-empty URL and a non-empty display filename, unique within its localization. Filename extensions are optional; formats are detected when files are loaded.
 
 ## License
 

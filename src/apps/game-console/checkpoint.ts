@@ -110,7 +110,7 @@ export function getGameLocator(source: GameSource, baseUrl: string): GameLocator
     if (source.type === 'object') {
         return { kind: 'object' };
     }
-    else if (source.type === 'xml' || source.type === 'eskuel-game-package') {
+    else if (source.type === 'auto' || source.type === 'xml' || source.type === 'eskuel-game-package') {
         if (source.source.type === 'fetch') {
             return {
                 kind: 'url',

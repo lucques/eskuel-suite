@@ -6,7 +6,7 @@ import { SubtleButton } from '../subtle-button/SubtleButton';
 import { ThemedModal } from '../app-theme/AppTheme';
 import styles from './OpenSourceModal.module.css';
 import type { OpenSourceFile, OpenSourceOption } from './OpenSourceOptions';
-import { UnsupportedFileTypeError } from './file-error';
+import { FileSourceError } from './file-error';
 
 type SourceType = 'provided' | 'local-file';
 
@@ -16,7 +16,6 @@ export function OpenSourceModal<T>({
     emptyProvidedSourcesMessage,
     localFileTitle,
     fileIcons,
-    fileAccept,
     providedSources,
     fileToSource,
     maxFileSizeBytes,
@@ -28,15 +27,15 @@ export function OpenSourceModal<T>({
     emptyProvidedSourcesMessage: string;
     localFileTitle: string;
     fileIcons: ReactNode;
-    fileAccept: string;
     providedSources: readonly OpenSourceOption<T>[];
     fileToSource: (file: File) => Promise<T>;
-    maxFileSizeBytes: number | ((file: File) => number);
+    maxFileSizeBytes: number;
     onHide: () => void;
     onOpenFile: (source: WithFilename<T>) => void;
 }) {
     const { t } = useTranslation('common');
     const titleId = useId();
+    const formId = useId();
     const sourceSelectionName = useId();
 
     const [sourceType, setSourceType] = useState<SourceType | null>(null);
@@ -51,6 +50,8 @@ export function OpenSourceModal<T>({
     const selectedFile = selectedOption === undefined
         ? undefined
         : findSelectedFile(selectedOption, selectedFileKeys[selectedOption.key]);
+    const canOpen = (sourceType === 'provided' && selectedFile !== undefined)
+        || (sourceType === 'local-file' && localFileSource !== null);
 
     const selectLocalFileSource = () => {
         setSourceType('local-file');
@@ -79,9 +80,8 @@ export function OpenSourceModal<T>({
             setLocalFileSource(null);
             setFileError(null);
 
-            const resolvedMaxFileSizeBytes = resolveMaxFileSizeBytes(maxFileSizeBytes, selectedFile);
-            if (selectedFile.size > resolvedMaxFileSizeBytes) {
-                setFileError(t('common.file_too_large', { limit: formatMegabytes(resolvedMaxFileSizeBytes) }));
+            if (selectedFile.size > maxFileSizeBytes) {
+                setFileError(t('common.file_too_large', { limit: formatMegabytes(maxFileSizeBytes) }));
             }
             else {
                 void fileToSource(selectedFile).then(source => {
@@ -90,7 +90,7 @@ export function OpenSourceModal<T>({
                     }
                 }, (error: unknown) => {
                     if (fileReadId.current === currentFileReadId) {
-                        setFileError(error instanceof UnsupportedFileTypeError
+                        setFileError(error instanceof FileSourceError
                             ? error.message
                             : t('common.file_read_error'));
                     }
@@ -105,7 +105,15 @@ export function OpenSourceModal<T>({
                 <Modal.Title id={titleId}>{title}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form>
+                <Form
+                    id={formId}
+                    onSubmit={event => {
+                        event.preventDefault();
+                        if (canOpen) {
+                            onOpenClicked();
+                        }
+                    }}
+                >
                     <h2 className='h5 mb-3'>{providedSourcesTitle}</h2>
                     {providedSources.length === 0
                         ? <p className='fst-italic mb-0'>{emptyProvidedSourcesMessage}</p>
@@ -194,7 +202,6 @@ export function OpenSourceModal<T>({
                         <div className={styles.localFileSelector}>
                             <Form.Control
                                 type='file'
-                                accept={fileAccept}
                                 onChange={onFileSelected}
                             />
                         </div>
@@ -210,10 +217,9 @@ export function OpenSourceModal<T>({
                     {t('common.close')}
                 </SubtleButton>
                 <SubtleButton
-                    onClick={onOpenClicked}
-                    disabled={sourceType === null
-                        || (sourceType === 'provided' && selectedFile === undefined)
-                        || (sourceType === 'local-file' && localFileSource === null)}
+                    type='submit'
+                    form={formId}
+                    disabled={!canOpen}
                     variant='primary'
                 >
                     {t('common.open')}
@@ -240,13 +246,4 @@ function findSelectedFile<T>(
 
 function formatMegabytes(bytes: number): string {
     return (bytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 });
-}
-
-function resolveMaxFileSizeBytes(
-    maxFileSizeBytes: number | ((file: File) => number),
-    file: File,
-): number {
-    return typeof maxFileSizeBytes === 'number'
-        ? maxFileSizeBytes
-        : maxFileSizeBytes(file);
 }

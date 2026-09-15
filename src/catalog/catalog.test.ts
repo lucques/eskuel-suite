@@ -19,7 +19,7 @@ describe('game catalog', () => {
                 pageUrl: '/en/games/game/',
                 source: {
                     filename: 'game.xml',
-                    type: 'xml',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/game.xml' },
                 },
             },
@@ -30,7 +30,7 @@ describe('game catalog', () => {
                 pageUrl: '/en/games/game/',
                 source: {
                     filename: 'game-compact.xml',
-                    type: 'xml',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/game-compact.xml' },
                 },
             },
@@ -41,7 +41,7 @@ describe('game catalog', () => {
                 pageUrl: '/en/games/game/',
                 source: {
                     filename: 'game.eskuelgame',
-                    type: 'eskuel-game-package',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/game.eskuelgame' },
                 },
             },
@@ -80,7 +80,7 @@ describe('game catalog', () => {
                 entryTitle: 'Battle of the Bands',
                 source: {
                     filename: 'battle-of-the-bands.xml',
-                    type: 'xml',
+                    type: 'auto',
                     source: {
                         type: 'fetch',
                         url: '/res/games/battle-of-the-bands/localizations/de/main/v1/battle-of-the-bands.xml',
@@ -92,7 +92,7 @@ describe('game catalog', () => {
 });
 
 describe('database catalog', () => {
-    it('derives SQL script, SQLite file, and Eskuel package sources from filenames', () => {
+    it('defers format detection until each database file is loaded', () => {
         const catalog = [makeDatabaseCatalogEntry()];
 
         assertDatabaseCatalog(catalog);
@@ -101,17 +101,17 @@ describe('database catalog', () => {
         expect(sources.map(source => source.source)).toEqual([
             {
                 filename: 'database.sql',
-                type: 'initial-sql-script',
+                type: 'auto',
                 source: { type: 'fetch', url: '/database.sql' },
             },
             {
                 filename: 'database.sqlite',
-                type: 'sqlite-db',
+                type: 'auto',
                 source: { type: 'fetch', url: '/database.sqlite' },
             },
             {
                 filename: 'database.eskueldb',
-                type: 'eskuel-database-package',
+                type: 'auto',
                 source: { type: 'fetch', url: '/database.eskueldb' },
             },
         ]);
@@ -149,13 +149,13 @@ describe('catalog runtime validation', () => {
             expected: /duplicate filename 'game.xml'/,
         },
         {
-            name: 'an unsupported game filename',
+            name: 'a blank game filename',
             candidate: () => {
                 const entry = mutableGameCatalogEntry();
-                entry.localizations.en.files[0].filename = 'game.sql';
+                entry.localizations.en.files[0].filename = ' ';
                 return [entry];
             },
-            expected: /unsupported game extension/,
+            expected: /filename must be a non-empty string/,
         },
         {
             name: 'a blank page URL',
@@ -177,14 +177,17 @@ describe('catalog runtime validation', () => {
         expect(() => assertGameCatalog([entry])).not.toThrow();
     });
 
-    it('rejects unsupported database filename extensions', () => {
+    it('accepts arbitrary filenames for games and databases', () => {
         const entry = makeDatabaseCatalogEntry();
         const candidate = structuredClone(entry) as unknown as {
             localizations: Record<string, { files: Array<{ filename: string }> }>;
         };
         candidate.localizations.en.files[0].filename = 'database.csv';
 
-        expect(() => assertDatabaseCatalog([candidate])).toThrowError(/unsupported database extension/);
+        expect(() => assertDatabaseCatalog([candidate])).not.toThrow();
+        const game = mutableGameCatalogEntry();
+        game.localizations.en.files[0] = { filename: 'download', url: '/download?id=123' };
+        expect(() => assertGameCatalog([game])).not.toThrow();
     });
 });
 

@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Effect } from 'effect';
 
 import {
     BrowserApp,
@@ -11,6 +12,7 @@ import type { GameEditorSession } from '../../src/apps/game-editor/session';
 const sessions: Array<{ dispose(): void }> = [];
 
 afterEach(() => {
+    vi.restoreAllMocks();
     for (const session of sessions) {
         session.dispose();
     }
@@ -25,7 +27,7 @@ describe('initial app sources', () => {
 
         expect(Reflect.get(component, 'initialFileSource')).toEqual({
             filename: 'direct.xml',
-            type: 'xml',
+            type: 'auto',
             source: { type: 'fetch', url: '/games/direct.xml?language=en' },
         });
     });
@@ -63,7 +65,7 @@ describe('initial app sources', () => {
                 filename: 'schema.sql',
                 source: {
                     filename: 'schema.sql',
-                    type: 'initial-sql-script',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/databases/schema.sql' },
                 },
             },
@@ -71,7 +73,7 @@ describe('initial app sources', () => {
                 filename: 'content.SQLITE',
                 source: {
                     filename: 'content.SQLITE',
-                    type: 'sqlite-db',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/databases/content.SQLITE?download=1' },
                 },
             },
@@ -79,16 +81,27 @@ describe('initial app sources', () => {
                 filename: 'content.eskueldb',
                 source: {
                     filename: 'content.eskueldb',
-                    type: 'eskuel-database-package',
+                    type: 'auto',
                     source: { type: 'fetch', url: '/databases/content.eskueldb' },
                 },
             },
         ]);
     });
 
-    it('rejects an unsupported initial database URL extension', () => {
-        expect(() => new BrowserApp('unused', {
+    it('reports a failed URL fetch through the session', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+        const component = new BrowserApp('unused', {
             initialDatabaseUrls: ['/databases/content.csv'],
-        })).toThrowError(/Unsupported database filename extension/);
+        });
+        const browserSessions = Reflect.get(component, 'instances') as BrowserSession[];
+        sessions.push(...browserSessions);
+
+        const error = await Effect.runPromise(Effect.flip(browserSessions[0].resolve()));
+
+        expect(error).toEqual({
+            kind: 'fetch-db',
+            url: '/databases/content.csv',
+        });
+        expect(browserSessions[0].getSnapshot()).toEqual({ kind: 'failed', error });
     });
 });

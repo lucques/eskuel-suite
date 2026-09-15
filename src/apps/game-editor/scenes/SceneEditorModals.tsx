@@ -80,6 +80,7 @@ export function EditSceneModal({ initialScene, onHide, onSaveAndHide }: {
     const { t } = useTranslation('game-editor');
     const { t: tc } = useTranslation('common');
     const titleId = useId();
+    const formId = useId();
     const [editedScene, setEditedScene] = useState<EditableScene | null>(null);
     const [formState, setFormState] = useState<SceneEditorFormState<EditableScene>>(
         () => createSceneEditorFormState<EditableScene>(null, null),
@@ -123,7 +124,16 @@ export function EditSceneModal({ initialScene, onHide, onSaveAndHide }: {
                 <Modal.Title id={titleId} className={styles.modalTitle}>{t('scene_edit_title')}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form className={styles.formContainer}>
+                <Form
+                    id={formId}
+                    className={styles.formContainer}
+                    onSubmit={event => {
+                        event.preventDefault();
+                        if (canSave) {
+                            handleSave();
+                        }
+                    }}
+                >
                     <ChooseSceneType sceneType={formState.editType} setSceneType={handleSetSceneType} />
                     <EditTextSceneTab initialScene={formState.initialTextScene} updateScene={setEditedScene} />
                     <EditImageSceneTab
@@ -139,7 +149,7 @@ export function EditSceneModal({ initialScene, onHide, onSaveAndHide }: {
                 <SubtleButton variant='secondary' onClick={onHide}>
                     {tc('common.close')}
                 </SubtleButton>
-                <SubtleButton variant='primary' onClick={handleSave} disabled={!canSave}>
+                <SubtleButton type='submit' form={formId} variant='primary' disabled={!canSave}>
                     {tc('common.save')}
                 </SubtleButton>
             </Modal.Footer>
@@ -155,6 +165,7 @@ export function AddSceneModal({ show, onHide, onSaveAndHide }: {
     const { t } = useTranslation('game-editor');
     const { t: tc } = useTranslation('common');
     const titleId = useId();
+    const formId = useId();
     const [editedScene, setEditedScene] = useState<Scene | null>(null);
     const [formState, setFormState] = useState<SceneEditorFormState<Scene>>(
         () => createSceneEditorFormState(null, null),
@@ -199,7 +210,16 @@ export function AddSceneModal({ show, onHide, onSaveAndHide }: {
                 <Modal.Title id={titleId} className={styles.modalTitle}>{t('scene_add_title')}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Form className={styles.formContainer}>
+                <Form
+                    id={formId}
+                    className={styles.formContainer}
+                    onSubmit={event => {
+                        event.preventDefault();
+                        if (canSave) {
+                            handleSave();
+                        }
+                    }}
+                >
                     <ChooseSceneType sceneType={formState.editType} setSceneType={handleSetSceneType} />
                     <EditTextSceneTab initialScene={formState.initialTextScene} updateScene={setEditedScene} />
                     <EditImageSceneTab
@@ -215,7 +235,7 @@ export function AddSceneModal({ show, onHide, onSaveAndHide }: {
                 <SubtleButton variant='secondary' onClick={onHide}>
                     {tc('common.close')}
                 </SubtleButton>
-                <SubtleButton variant='primary' onClick={handleSave} disabled={!canSave}>
+                <SubtleButton type='submit' form={formId} variant='primary' disabled={!canSave}>
                     {tc('common.add')}
                 </SubtleButton>
             </Modal.Footer>
